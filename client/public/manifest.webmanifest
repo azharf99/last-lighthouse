@@ -1,0 +1,22 @@
+{
+  "name": "The Last Lighthouse",
+  "short_name": "Lighthouse",
+  "description": "Menyalakan Mercusuar Terakhir - Board Game Multiplatform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d16",
+  "theme_color": "#070d16",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

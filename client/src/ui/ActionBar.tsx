@@ -107,6 +107,10 @@ export function ActionBar({ state, legal, disabled, onSend, onFight }: Props) {
 
         {rest.map((cmd, i) => {
           const { text, hint } = label(cmd, state);
+          const testId = `action-${cmd.kind}${cmd.resource ? `-${cmd.resource}` : ''}${
+            cmd.component ? `-${cmd.component}` : ''
+          }${cmd.target ? `-${cmd.target}` : ''}`;
+
           return (
             <button
               key={`${cmd.kind}-${cmd.resource ?? cmd.component ?? cmd.target ?? i}-${i}`}
@@ -115,6 +119,9 @@ export function ActionBar({ state, legal, disabled, onSend, onFight }: Props) {
               }`}
               disabled={disabled}
               onClick={() => handleClick(cmd)}
+              data-testid={testId}
+              data-action={cmd.kind}
+              aria-label={`${text} ${hint ? `(${hint})` : ''} - Biaya 1 AP`}
             >
               <span>{text}</span>
               {hint && <span className="muted tiny">{hint}</span>}
@@ -131,6 +138,9 @@ export function ActionBar({ state, legal, disabled, onSend, onFight }: Props) {
               sfx.playClick();
               onSend(endTurn);
             }}
+            data-testid="action-end-turn"
+            data-action="end_turn"
+            aria-label={label(endTurn, state).text}
           >
             {label(endTurn, state).text}
           </button>

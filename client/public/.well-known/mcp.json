@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "the-last-lighthouse",
+  "description": "WebMCP tool definitions for The Last Lighthouse game actions",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "send_game_command",
+      "description": "Sends a game command (move, explore, gather, repair, fight, investigate, rest, trade, end_turn)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["move", "explore", "gather", "repair", "fight", "investigate", "rest", "trade", "end_turn"]
+          },
+          "player": { "type": "string" },
+          "to": { "type": "string" },
+          "resource": { "type": "string" },
+          "component": { "type": "string" }
+        },
+        "required": ["kind", "player"]
+      }
+    },
+    {
+      "name": "get_game_state",
+      "description": "Retrieves the current game state and valid legal commands",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

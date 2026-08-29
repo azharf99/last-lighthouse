@@ -1,0 +1,12 @@
+# The Last Lighthouse
+
+> The Last Lighthouse is a strategic, semi-cooperative turn-based board game built with Go, WebAssembly, React, and PixiJS.
+
+## Documentation
+- [Game Overview](http://localhost:5173/): Main playable board game application and interactive map.
+- [PWA Manifest](http://localhost:5173/manifest.webmanifest): Web Application Manifest for mobile and desktop installation.
+- [Robots Directives](http://localhost:5173/robots.txt): Crawler and search indexing configuration.
+- [WebMCP Tool Schema](http://localhost:5173/.well-known/mcp.json): Machine actionability tool definitions for autonomous AI agents.
+
+## Optional
+- [LLMs Full Specification](http://localhost:5173/llms-full.txt): Detailed rules, 4 asymmetric character roles, and event sourcing architecture.

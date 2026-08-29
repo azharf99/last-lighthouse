@@ -148,10 +148,18 @@ export default function App() {
             <b>{i18n.t('app.title')} — Lobby Online (M2/M3)</b>
           </span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="action action--ghost" onClick={handleToggleLang}>
+            <button
+              className="action action--ghost"
+              onClick={handleToggleLang}
+              aria-label={lang === 'id' ? '🇮🇩 ID - Bahasa Indonesia' : '🇬🇧 EN - English'}
+            >
               {lang === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}
             </button>
-            <button className="action action--ghost" onClick={handleToggleSound}>
+            <button
+              className="action action--ghost"
+              onClick={handleToggleSound}
+              aria-label={isMuted ? '🔇 Audio Hening' : '🔊 Audio Aktif'}
+            >
               {isMuted ? '🔇' : '🔊'}
             </button>
             <button
@@ -160,22 +168,28 @@ export default function App() {
                 sfx.playClick();
                 setPlayMode('hotseat');
               }}
+              aria-label={i18n.t('nav.hotseat')}
             >
               {i18n.t('nav.hotseat')}
             </button>
           </div>
         </div>
 
-        <div className="panel" style={{ maxWidth: 680, margin: '20px auto' }}>
+        <div className="panel" style={{ maxWidth: 680, margin: '20px auto' }} data-testid="lobby-panel">
           <h2 className="panel__title">👤 Profil Pemain</h2>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <label htmlFor="player-name-input" className="visually-hidden">
+              Nama Profil Pemain
+            </label>
             <input
+              id="player-name-input"
               type="text"
               className="action"
               style={{ flex: 1, textAlign: 'left', background: 'var(--bg-card)' }}
               value={displayName}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Nama Anda"
+              data-testid="lobby-input-name"
             />
           </div>
 
@@ -187,6 +201,7 @@ export default function App() {
                 setShowSetupModal(true);
               }}
               disabled={lobbyLoading}
+              data-testid="lobby-btn-create"
             >
               + Buat Match Baru (Pilih Karakter)
             </button>
@@ -197,6 +212,7 @@ export default function App() {
                 refreshLobbies();
               }}
               disabled={lobbyLoading}
+              data-testid="lobby-btn-refresh"
             >
               🔄 Segarkan Daftar
             </button>
@@ -300,12 +316,14 @@ export default function App() {
 
   return (
     <div className="app">
+      <h1 className="visually-hidden">The Last Lighthouse — Menyalakan Mercusuar Terakhir</h1>
+
       {/* Top Darkness Track Bar */}
       <DarknessTrack state={st} max={DARKNESS_MAX} />
 
       {/* Main Header / Banner */}
-      <div className="panel banner">
-        <span className="banner__turn">
+      <header className="panel banner" role="banner" data-testid="game-header">
+        <span className="banner__turn" data-testid="turn-status">
           {over ? (
             <b>{st.status === 'won' ? i18n.t('status.won') : i18n.t('status.lost')}</b>
           ) : (
@@ -321,10 +339,22 @@ export default function App() {
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Controls: Audio, Language, Canvas Mode */}
-          <button className="action action--ghost" onClick={handleToggleLang} title="Ganti Bahasa">
+          <button
+            className="action action--ghost"
+            onClick={handleToggleLang}
+            title="Ganti Bahasa"
+            aria-label={lang === 'id' ? '🇮🇩 ID - Bahasa Indonesia' : '🇬🇧 EN - English'}
+            data-testid="btn-toggle-lang"
+          >
             {lang === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}
           </button>
-          <button className="action action--ghost" onClick={handleToggleSound} title="Toggle Audio">
+          <button
+            className="action action--ghost"
+            onClick={handleToggleSound}
+            title="Toggle Audio"
+            aria-label={isMuted ? '🔇 Audio Hening' : '🔊 Audio Aktif'}
+            data-testid="btn-toggle-sound"
+          >
             {isMuted ? '🔇' : '🔊'}
           </button>
           <button
@@ -334,6 +364,8 @@ export default function App() {
               setUseCanvasMap((v) => !v);
             }}
             title="Toggle PixiJS Canvas / SVG Map"
+            aria-label={useCanvasMap ? '🎨 WebGL - Peta Canvas' : '📐 SVG - Peta Vektor'}
+            data-testid="btn-toggle-map"
           >
             {useCanvasMap ? '🎨 WebGL' : '📐 SVG'}
           </button>
@@ -345,6 +377,8 @@ export default function App() {
                 sfx.playClick();
                 setOnlineMatchId(null);
               }}
+              aria-label={i18n.t('nav.back_to_lobby')}
+              data-testid="btn-back-lobby"
             >
               {i18n.t('nav.back_to_lobby')}
             </button>
@@ -356,6 +390,8 @@ export default function App() {
                   sfx.playClick();
                   setShowSetupModal(true);
                 }}
+                aria-label="⚙️ Karakter - Pengaturan"
+                data-testid="btn-setup-character"
               >
                 ⚙️ Karakter
               </button>
@@ -366,6 +402,8 @@ export default function App() {
                   setPlayMode('online');
                   setOnlineMatchId(null);
                 }}
+                aria-label={i18n.t('nav.online')}
+                data-testid="btn-switch-online"
               >
                 {i18n.t('nav.online')}
               </button>
@@ -375,63 +413,67 @@ export default function App() {
                   sfx.playClick();
                   game.restart();
                 }}
+                aria-label={i18n.t('nav.new_game')}
+                data-testid="btn-new-game"
               >
                 {i18n.t('nav.new_game')}
               </button>
             </>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Center 2D Island Map (PixiJS Canvas or SVG fallback) */}
-      {useCanvasMap ? (
-        <IslandMapCanvas
-          state={st}
-          legal={game.legal}
-          activePlayer={activeId}
-          onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
-          onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
-        />
-      ) : (
-        <IslandMap
-          state={st}
-          legal={game.legal}
-          activePlayer={activeId}
-          onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
-          onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
-        />
-      )}
-
-      {/* Action Bar */}
-      {!over && (
-        <div className="panel">
-          <h2 className="panel__title">⚡ {i18n.t('status.turn_of')} {activePlayer?.name} — Aksi</h2>
-          <ActionBar
+      <main style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)' }} data-testid="game-main">
+        {/* Center 2D Island Map (PixiJS Canvas or SVG fallback) */}
+        {useCanvasMap ? (
+          <IslandMapCanvas
             state={st}
             legal={game.legal}
-            disabled={game.busy}
-            onSend={send}
-            onFight={() => setShowCombatModal(true)}
+            activePlayer={activeId}
+            onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
+            onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
           />
-        </div>
-      )}
+        ) : (
+          <IslandMap
+            state={st}
+            legal={game.legal}
+            activePlayer={activeId}
+            onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
+            onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
+          />
+        )}
 
-      {/* Card Decks Section (GDD §8.3) */}
-      <CardDeckPanel state={st} />
+        {/* Action Bar */}
+        {!over && (
+          <div className="panel">
+            <h2 className="panel__title">⚡ {i18n.t('status.turn_of')} {activePlayer?.name} — Aksi</h2>
+            <ActionBar
+              state={st}
+              legal={game.legal}
+              disabled={game.busy}
+              onSend={send}
+              onFight={() => setShowCombatModal(true)}
+            />
+          </div>
+        )}
 
-      {/* Player Inventory & Lighthouse Panels */}
-      <div className="app__lower">
-        <PlayerPanel
-          view={game.view}
-          maxHealth={MAX_HEALTH}
-          maxAP={MAX_AP}
-          inventoryCapacity={INVENTORY_CAPACITY}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)', minHeight: 0 }}>
-          <LighthousePanel state={st} />
-          <EventLog log={game.log} state={st} />
+        {/* Card Decks Section (GDD §8.3) */}
+        <CardDeckPanel state={st} />
+
+        {/* Player Inventory & Lighthouse Panels */}
+        <div className="app__lower">
+          <PlayerPanel
+            view={game.view}
+            maxHealth={MAX_HEALTH}
+            maxAP={MAX_AP}
+            inventoryCapacity={INVENTORY_CAPACITY}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)', minHeight: 0 }}>
+            <LighthousePanel state={st} />
+            <EventLog log={game.log} state={st} />
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* Mystery Dilemma Dialog */}
       {st.pending && !over && !game.awaitingHandoff && (

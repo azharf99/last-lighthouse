@@ -1,0 +1,126 @@
+name: Multiplatform Build & Test (M4)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # 1. Core Go Tests & WASM Verification
+  test-core-and-wasm:
+    name: Test Core, Bot, Server & WASM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run Go Unit Tests
+        run: go test ./... -v -count=1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Client Dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Verify WASM Smoke Test
+        run: node scripts/wasm-smoke.mjs
+
+      - name: Build Web Client
+        run: npm run build
+        working-directory: client
+
+  # 2. Tauri Desktop Build Matrix (Windows, macOS, Ubuntu)
+  build-desktop-tauri:
+    name: Build Desktop Tauri (${{ matrix.platform }})
+    needs: test-core-and-wasm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux Dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Client Dependencies & Build Web
+        run: |
+          npm ci
+          npm run build
+        working-directory: client
+
+      - name: Build Tauri Desktop Binary
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: './client'
+          tagName: v__VERSION__
+          releaseName: 'App v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+
+  # 3. Mobile Capacitor Validation (Android)
+  validate-mobile-capacitor:
+    name: Validate Mobile Capacitor Packaging
+    needs: test-core-and-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Build Web Client
+        run: npm run build
+        working-directory: client
+
+      - name: Sync Capacitor Web Assets
+        run: npx cap sync
+        working-directory: client

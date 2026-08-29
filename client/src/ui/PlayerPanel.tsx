@@ -18,7 +18,7 @@ function Inventory({ inv, capacity }: { inv: ResourceSet; capacity: number }) {
   const slots = Math.max(capacity, filled.length);
 
   return (
-    <div className="inventory" aria-label={`Inventory ${filled.length} dari ${capacity}`}>
+    <div className="inventory" role="group" aria-label={`Inventory ${filled.length} dari ${capacity}`}>
       {Array.from({ length: slots }, (_, i) => (
         <div key={i} className={`slot ${i < filled.length ? 'slot--filled' : ''}`}>
           {filled[i] ?? ''}

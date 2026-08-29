@@ -323,6 +323,7 @@ export function IslandMapCanvas({ state, legal, activePlayer, onMove, onExplore 
               setZoom((z) => Math.min(1.4, z + 0.1));
             }}
             title="Zoom In"
+            aria-label="Perbesar tampilan peta (Zoom In)"
           >
             +
           </button>
@@ -334,6 +335,7 @@ export function IslandMapCanvas({ state, legal, activePlayer, onMove, onExplore 
               setZoom((z) => Math.max(0.7, z - 0.1));
             }}
             title="Zoom Out"
+            aria-label="Perkecil tampilan peta (Zoom Out)"
           >
             -
           </button>
@@ -345,6 +347,7 @@ export function IslandMapCanvas({ state, legal, activePlayer, onMove, onExplore 
               setZoom(1);
             }}
             title="Reset Zoom"
+            aria-label="Reset zoom peta ke ukuran 100%"
           >
             100%
           </button>

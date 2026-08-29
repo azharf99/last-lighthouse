@@ -14,9 +14,9 @@
   --stone: #2b3d54;
   --stone-light: #3d5470;
 
-  --ink: #e8eef6;
-  --ink-dim: #93a6bd;
-  --ink-faint: #5f7591;
+  --ink: #f0f4f9;
+  --ink-dim: #b8c9dd;
+  --ink-faint: #8fa5c2;
 
   --beacon: #ffc76b;
   --beacon-glow: rgba(255, 199, 107, 0.35);
@@ -47,6 +47,18 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 body {
@@ -118,6 +130,8 @@ button {
   border: 1px solid var(--dread-deep);
   border-radius: var(--radius);
   padding: 10px 14px;
+  min-height: 52px;
+  contain: layout;
 }
 
 .darkness__head {
@@ -188,10 +202,10 @@ button {
 
 /* ---------- Peta pulau ---------- */
 
-/* SVG dengan viewBox tumbuh sampai selebar induknya kalau tingginya dibiarkan
-   auto -- pada layar lebar itu membuat peta setinggi ~900px dan mendorong
-   seluruh panel bawah keluar layar. Tingginya dikunci; preserveAspectRatio
-   bawaan yang menyesuaikan skalanya. */
+.map {
+  min-height: 620px;
+}
+
 .map__svg {
   width: 100%;
   height: clamp(240px, 40vh, 400px);
@@ -577,11 +591,13 @@ button {
 }
 
 .banner {
-  flex-direction: row; /* menimpa .panel yang column; tanpa ini tombol turun sendiri */
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+  min-height: 52px;
+  contain: layout;
 }
 
 .banner__turn {
@@ -702,11 +718,86 @@ button {
   cursor: not-allowed;
 }
 
-.choice__title {
-  font-weight: 600;
-}
-
 .choice__text {
   font-size: 12px;
   color: var(--ink-dim);
 }
+
+/* ---------- Mobile & Multiplatform Adaptations (M4) ---------- */
+
+@media (max-width: 768px) {
+  .app {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    gap: 10px;
+  }
+
+  .banner {
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .banner__turn {
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .banner > div {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .app__lower {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .action {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    justify-content: space-between;
+  }
+
+  .actions {
+    gap: 6px;
+  }
+
+  .map {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .overlay__card {
+    margin: 12px;
+    max-width: calc(100vw - 24px);
+    padding: 18px 14px;
+  }
+
+  .overlay__card--wide {
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  .darkness__track {
+    gap: 4px;
+  }
+
+  .darkness__step {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .panel {
+    padding: 10px 12px;
+  }
+}
+

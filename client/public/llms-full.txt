@@ -1,0 +1,9 @@
+# The Last Lighthouse — Full Specification
+
+> The Last Lighthouse is a strategic, semi-cooperative turn-based board game built with Go, WebAssembly, React, and PixiJS.
+
+## Rules & Mechanics
+- **Goal:** Cooperatively repair 5 lighthouse components before the Darkness Track reaches 8. The player with the highest VP upon lighting the lighthouse wins.
+- **Asymmetric Roles:** Navigator (exploring bonuses), Engineer (repair discount), Hunter (+1 combat roll bonus), Scholar (mystery card choices).
+- **Actions (3 AP/turn):** Move (1 AP), Explore (1 AP), Gather (1 AP), Repair (1 AP), Fight (1 AP, 1D6 dice roll), Investigate (1 AP), Rest (1 AP), Trade (1 AP), End Turn.
+- **Combat Resolution:** 1-2 = Wound (-1 HP), 3-4 = Standoff, 5-6 = Monster Defeated (+1 VP).
