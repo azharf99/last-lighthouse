@@ -1,0 +1,50 @@
+# ==========================================================
+# Multi-Stage Build: The Last Lighthouse - Go Backend Server
+# Base: Alpine Linux for minimal image size (~15MB) & security
+# ==========================================================
+
+# Stage 1: Build binary
+FROM golang:1.24-alpine AS builder
+
+# Install build tools & git
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /src
+
+# Download dependencies first for better Docker layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Compile statically linked stripped binary with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /bin/lastlighthouse-server ./cmd/server
+
+# Stage 2: Final Minimal Runtime
+FROM alpine:3.21
+
+# Install runtime dependencies (SSL certificates for HTTPS/Push notifications & Timezone data)
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S appgroup -g 10001 \
+    && adduser -S -u 10001 -G appgroup appuser
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /bin/lastlighthouse-server /app/server
+
+# Set ownership to unprivileged user
+USER appuser:appgroup
+
+# Expose default HTTP/WebSocket port
+EXPOSE 8080
+
+# Environment variables with sensible defaults
+ENV LLH_ADDR=":8080" \
+    LLH_TURN_TIMEOUT="90s" \
+    GIN_MODE="release"
+
+# Run server
+ENTRYPOINT ["/app/server"]

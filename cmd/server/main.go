@@ -74,7 +74,12 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
-	// 5. Jalankan server HTTP
+	// 5. Jalankan server HTTP & Deadline Scheduler (M5/M6)
+	if httpServer.Scheduler() != nil {
+		httpServer.Scheduler().Start()
+		defer httpServer.Scheduler().Stop()
+	}
+
 	go func() {
 		log.Printf("Server mendengarkan di %s", *addr)
 		log.Printf("WebSocket endpoint: ws://%s/ws", *addr)
@@ -90,6 +95,9 @@ func main() {
 	<-stop
 
 	log.Println("Sinyal shutdown diterima. Menyimpan snapshot match aktif...")
+	if httpServer.Scheduler() != nil {
+		httpServer.Scheduler().Stop()
+	}
 	registry.Shutdown()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)

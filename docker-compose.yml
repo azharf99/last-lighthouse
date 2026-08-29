@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL Database Service (Alpine)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: lastlighthouse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lastlighthouse}
+      POSTGRES_USER: ${POSTGRES_USER:-lastlighthouse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_postgres_password_change_me}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lastlighthouse} -d ${POSTGRES_DB:-lastlighthouse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  # ----------------------------------------------------------------------------
+  # 2. Go Backend Application Server (Alpine Multi-Stage)
+  # ----------------------------------------------------------------------------
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: lastlighthouse-server
+    restart: unless-stopped
+    environment:
+      LLH_ADDR: :8080
+      LLH_DB_URL: postgres://${POSTGRES_USER:-lastlighthouse}:${POSTGRES_PASSWORD:-secure_postgres_password_change_me}@postgres:5432/${POSTGRES_DB:-lastlighthouse}?sslmode=disable
+      LLH_JWT_SECRET: ${LLH_JWT_SECRET:-super_secret_jwt_key_change_me_in_production_vps_deployment_123456}
+      LLH_TURN_TIMEOUT: ${LLH_TURN_TIMEOUT:-90s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ----------------------------------------------------------------------------
+  # 3. Nginx Reverse Proxy & Frontend Static Host (Alpine)
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: lastlighthouse-web
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    depends_on:
+      - server
+    networks:
+      - app-network
+
+# ------------------------------------------------------------------------------
+# Volumes & Networks
+# ------------------------------------------------------------------------------
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

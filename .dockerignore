@@ -1,0 +1,29 @@
+# Git & CI/CD
+.git
+.github
+.gitignore
+
+# Go artifacts
+*.exe
+*.test
+*.out
+*.prof
+bin/
+
+# Node & Frontend
+client/node_modules/
+client/dist/
+client/.vite/
+client/coverage/
+
+# Tauri & Mobile Builds
+client/src-tauri/target/
+client/android/
+client/ios/
+
+# Environment and Logs
+.env
+.env.local
+*.log
+tmp/
+.temp/
