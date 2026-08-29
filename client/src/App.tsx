@@ -13,6 +13,11 @@ import { MysteryDialog } from './ui/MysteryDialog';
 import { CardDeckPanel } from './ui/CardDeckPanel';
 import { CombatModal } from './ui/CombatModal';
 import { CharacterPickerModal } from './ui/CharacterPickerModal';
+import { MatchHubPanel } from './ui/MatchHubPanel';
+import { ReplayModal } from './ui/ReplayModal';
+import { TelemetryModal } from './ui/TelemetryModal';
+import { TutorialModal } from './ui/TutorialModal';
+import { registerServiceWorker } from './session/pushManager';
 import { sfx } from './audio/sfx';
 import { i18n } from './i18n';
 import type { Command, PlayerID } from './types';
@@ -43,6 +48,9 @@ export default function App() {
   const [lang, setLang] = useState<'id' | 'en'>(i18n.getLang());
   const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
   const [showCombatModal, setShowCombatModal] = useState<boolean>(false);
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
+  const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
+  const [replayMatchId, setReplayMatchId] = useState<string | null>(null);
 
   // Active seats
   const [seats, setSeats] = useState<SeatConfig[]>(DEFAULT_SEATS);
@@ -134,6 +142,10 @@ export default function App() {
   };
 
   useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
+  useEffect(() => {
     if (playMode === 'online' && !onlineMatchId) {
       refreshLobbies();
     }
@@ -148,6 +160,28 @@ export default function App() {
             <b>{i18n.t('app.title')} — Lobby Online (M2/M3)</b>
           </span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              className="action action--ghost"
+              onClick={() => {
+                sfx.playClick();
+                setShowTutorialModal(true);
+              }}
+              aria-label="📖 Panduan - Cara Bermain"
+              data-testid="btn-tutorial"
+            >
+              📖 Panduan
+            </button>
+            <button
+              className="action action--ghost"
+              onClick={() => {
+                sfx.playClick();
+                setShowTelemetryModal(true);
+              }}
+              aria-label="📊 Statistik - Telemetri"
+              data-testid="btn-telemetry"
+            >
+              📊 Statistik
+            </button>
             <button
               className="action action--ghost"
               onClick={handleToggleLang}
@@ -261,12 +295,36 @@ export default function App() {
             </div>
           )}
         </div>
+        
+        {/* Async & Match History Hub (M5/M6) */}
+        <MatchHubPanel
+          playerId={myPlayerId}
+          authToken={authToken}
+          onJoinMatch={handleJoinOnlineMatch}
+          onOpenReplay={(mid) => setReplayMatchId(mid)}
+        />
 
         <CharacterPickerModal
           initialSeats={seats}
           isOpen={showSetupModal}
           onConfirm={handleStartWithCustomSeats}
           onCancel={() => setShowSetupModal(false)}
+        />
+
+        <TutorialModal
+          isOpen={showTutorialModal}
+          onClose={() => setShowTutorialModal(false)}
+        />
+
+        <TelemetryModal
+          isOpen={showTelemetryModal}
+          onClose={() => setShowTelemetryModal(false)}
+        />
+
+        <ReplayModal
+          matchId={replayMatchId || ''}
+          isOpen={!!replayMatchId}
+          onClose={() => setReplayMatchId(null)}
         />
       </div>
     );
@@ -338,6 +396,30 @@ export default function App() {
           )}
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            className="action action--ghost"
+            onClick={() => {
+              sfx.playClick();
+              setShowTutorialModal(true);
+            }}
+            title="Panduan Cara Bermain"
+            aria-label="📖 Panduan - Cara Bermain"
+            data-testid="btn-tutorial-gameplay"
+          >
+            📖 Panduan
+          </button>
+          <button
+            className="action action--ghost"
+            onClick={() => {
+              sfx.playClick();
+              setShowTelemetryModal(true);
+            }}
+            title="Statistik Global"
+            aria-label="📊 Statistik - Telemetri"
+            data-testid="btn-telemetry-gameplay"
+          >
+            📊 Statistik
+          </button>
           {/* Controls: Audio, Language, Canvas Mode */}
           <button
             className="action action--ghost"
@@ -589,6 +671,23 @@ export default function App() {
           {game.rejection}
         </div>
       )}
+
+      {/* M6 Modals */}
+      <TutorialModal
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+      />
+
+      <TelemetryModal
+        isOpen={showTelemetryModal}
+        onClose={() => setShowTelemetryModal(false)}
+      />
+
+      <ReplayModal
+        matchId={replayMatchId || ''}
+        isOpen={!!replayMatchId}
+        onClose={() => setReplayMatchId(null)}
+      />
     </div>
   );
 }

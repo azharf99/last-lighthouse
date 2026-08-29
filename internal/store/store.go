@@ -45,13 +45,32 @@ type UserRecord struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-// Store adalah antarmuka penyimpanan persisten untuk server Last Lighthouse (ADR-004).
-// Menangani metadata match, event log append-only, snapshot, dan identitas user.
+// TurnDeadline menyimpan batas waktu giliran pemain dalam match async / realtime (ADR-007).
+type TurnDeadline struct {
+	MatchID    string    `json:"matchId"`
+	PlayerID   string    `json:"playerId"`
+	DeadlineAt time.Time `json:"deadlineAt"`
+	Missed     int       `json:"missed"` // Jumlah batas waktu terlewat berturut-turut
+}
+
+// PushSubscription menyimpan endpoint push notification pengguna untuk Web Push / FCM / APNs (ADR-007).
+type PushSubscription struct {
+	PlayerID  string    `json:"playerId"`
+	Endpoint  string    `json:"endpoint"`
+	P256dh    string    `json:"p256dh"`
+	Auth      string    `json:"auth"`
+	Platform  string    `json:"platform"` // "web", "fcm", "apns"
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// Store adalah antarmuka penyimpanan persisten untuk server Last Lighthouse (ADR-004, ADR-007).
+// Menangani metadata match, event log append-only, snapshot, identitas user, turn deadlines, dan push subscriptions.
 type Store interface {
 	// Match metadata
 	CreateMatch(ctx context.Context, m MatchRecord) error
 	GetMatch(ctx context.Context, id string) (*MatchRecord, error)
 	ListMatches(ctx context.Context, status string) ([]MatchRecord, error)
+	ListPlayerMatches(ctx context.Context, playerID string) ([]MatchRecord, error)
 	UpdateMatchStatus(ctx context.Context, id string, status string) error
 
 	// Event log — sumber kebenaran (append-only)
@@ -66,6 +85,16 @@ type Store interface {
 	CreateUser(ctx context.Context, u UserRecord) error
 	GetUser(ctx context.Context, id string) (*UserRecord, error)
 	GetUserByToken(ctx context.Context, token string) (*UserRecord, error)
+
+	// Turn Deadline Scheduler (M5 - ADR-007)
+	SetTurnDeadline(ctx context.Context, d TurnDeadline) error
+	GetTurnDeadline(ctx context.Context, matchID string) (*TurnDeadline, error)
+	GetExpiredDeadlines(ctx context.Context, now time.Time) ([]TurnDeadline, error)
+	ClearTurnDeadline(ctx context.Context, matchID string) error
+
+	// Push Notifications (M5 - ADR-007)
+	SavePushSubscription(ctx context.Context, sub PushSubscription) error
+	GetPushSubscriptions(ctx context.Context, playerID string) ([]PushSubscription, error)
 
 	Close() error
 }

@@ -273,6 +273,139 @@ func (p *PostgresStore) GetUserByToken(ctx context.Context, token string) (*User
 	return &u, nil
 }
 
+func (p *PostgresStore) ListPlayerMatches(ctx context.Context, playerID string) ([]MatchRecord, error) {
+	query := `
+		SELECT id, status, seed, content_hash, player_ids, turn_timeout_sec, created_at, finished_at
+		FROM matches
+		WHERE $1 = ANY(player_ids)
+		ORDER BY created_at DESC
+	`
+	rows, err := p.pool.Query(ctx, query, playerID)
+	if err != nil {
+		return nil, fmt.Errorf("list player matches for %s: %w", playerID, err)
+	}
+	defer rows.Close()
+
+	var out []MatchRecord
+	for rows.Next() {
+		var m MatchRecord
+		if err := rows.Scan(&m.ID, &m.Status, &m.Seed, &m.ContentHash, &m.PlayerIDs, &m.TurnTimeoutSec, &m.CreatedAt, &m.FinishedAt); err != nil {
+			return nil, fmt.Errorf("scan player match: %w", err)
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+// Turn Deadline Scheduler (M5 - ADR-007)
+
+func (p *PostgresStore) SetTurnDeadline(ctx context.Context, d TurnDeadline) error {
+	query := `
+		INSERT INTO turn_deadlines (match_id, player_id, deadline_at, missed)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (match_id) DO UPDATE SET
+			player_id = EXCLUDED.player_id,
+			deadline_at = EXCLUDED.deadline_at,
+			missed = EXCLUDED.missed
+	`
+	_, err := p.pool.Exec(ctx, query, d.MatchID, d.PlayerID, d.DeadlineAt, d.Missed)
+	if err != nil {
+		return fmt.Errorf("set turn deadline: %w", err)
+	}
+	return nil
+}
+
+func (p *PostgresStore) GetTurnDeadline(ctx context.Context, matchID string) (*TurnDeadline, error) {
+	query := `SELECT match_id, player_id, deadline_at, missed FROM turn_deadlines WHERE match_id = $1`
+	var d TurnDeadline
+	err := p.pool.QueryRow(ctx, query, matchID).Scan(&d.MatchID, &d.PlayerID, &d.DeadlineAt, &d.Missed)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get turn deadline: %w", err)
+	}
+	return &d, nil
+}
+
+func (p *PostgresStore) GetExpiredDeadlines(ctx context.Context, now time.Time) ([]TurnDeadline, error) {
+	query := `
+		SELECT match_id, player_id, deadline_at, missed
+		FROM turn_deadlines
+		WHERE deadline_at <= $1
+		ORDER BY deadline_at ASC
+	`
+	rows, err := p.pool.Query(ctx, query, now)
+	if err != nil {
+		return nil, fmt.Errorf("get expired deadlines: %w", err)
+	}
+	defer rows.Close()
+
+	var out []TurnDeadline
+	for rows.Next() {
+		var d TurnDeadline
+		if err := rows.Scan(&d.MatchID, &d.PlayerID, &d.DeadlineAt, &d.Missed); err != nil {
+			return nil, fmt.Errorf("scan turn deadline: %w", err)
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+func (p *PostgresStore) ClearTurnDeadline(ctx context.Context, matchID string) error {
+	query := `DELETE FROM turn_deadlines WHERE match_id = $1`
+	_, err := p.pool.Exec(ctx, query, matchID)
+	if err != nil {
+		return fmt.Errorf("clear turn deadline: %w", err)
+	}
+	return nil
+}
+
+// Push Notifications (M5 - ADR-007)
+
+func (p *PostgresStore) SavePushSubscription(ctx context.Context, sub PushSubscription) error {
+	query := `
+		INSERT INTO push_subscriptions (player_id, endpoint, p256dh, auth, platform, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (player_id, endpoint) DO UPDATE SET
+			p256dh = EXCLUDED.p256dh,
+			auth = EXCLUDED.auth,
+			platform = EXCLUDED.platform
+	`
+	createdAt := sub.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now()
+	}
+	_, err := p.pool.Exec(ctx, query, sub.PlayerID, sub.Endpoint, sub.P256dh, sub.Auth, sub.Platform, createdAt)
+	if err != nil {
+		return fmt.Errorf("save push subscription: %w", err)
+	}
+	return nil
+}
+
+func (p *PostgresStore) GetPushSubscriptions(ctx context.Context, playerID string) ([]PushSubscription, error) {
+	query := `
+		SELECT player_id, endpoint, p256dh, auth, platform, created_at
+		FROM push_subscriptions
+		WHERE player_id = $1
+	`
+	rows, err := p.pool.Query(ctx, query, playerID)
+	if err != nil {
+		return nil, fmt.Errorf("get push subscriptions: %w", err)
+	}
+	defer rows.Close()
+
+	var out []PushSubscription
+	for rows.Next() {
+		var sub PushSubscription
+		if err := rows.Scan(&sub.PlayerID, &sub.Endpoint, &sub.P256dh, &sub.Auth, &sub.Platform, &sub.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan push subscription: %w", err)
+		}
+		out = append(out, sub)
+	}
+	return out, nil
+}
+
 func (p *PostgresStore) Close() error {
 	p.pool.Close()
 	return nil

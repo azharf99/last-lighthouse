@@ -66,6 +66,17 @@ func (r *Registry) CreateMatch(ctx context.Context, matchID string, seed int64, 
 		return nil, fmt.Errorf("start game: %w", err)
 	}
 
+	// Schedule turn deadline for first active player
+	if actor.state != nil && len(actor.state.TurnOrder) > 0 {
+		firstPlayer := actor.state.TurnOrder[0]
+		_ = r.store.SetTurnDeadline(ctx, store.TurnDeadline{
+			MatchID:    matchID,
+			PlayerID:   string(firstPlayer),
+			DeadlineAt: time.Now().Add(r.turnTimeout),
+			Missed:     0,
+		})
+	}
+
 	r.actors[matchID] = actor
 	return actor, nil
 }

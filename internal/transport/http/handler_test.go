@@ -13,6 +13,7 @@ import (
 	"github.com/lastlighthouse/lastlighthouse/internal/auth"
 	"github.com/lastlighthouse/lastlighthouse/internal/match"
 	"github.com/lastlighthouse/lastlighthouse/internal/store"
+	"github.com/lastlighthouse/lastlighthouse/internal/telemetry"
 	"github.com/lastlighthouse/lastlighthouse/internal/transport/ws"
 	nhooyrws "nhooyr.io/websocket"
 )
@@ -137,5 +138,147 @@ func TestWebSocketEndToEnd(t *testing.T) {
 
 	if outEnv.Type != "snapshot" && outEnv.Type != "events" {
 		t.Fatalf("expected snapshot/events, got %s: %s", outEnv.Type, string(msg))
+	}
+}
+
+func TestPushAndMyMatchesAPI(t *testing.T) {
+	srv, a, _, _ := setupTestServer()
+	h := srv.Handler()
+
+	token, uid, _ := a.GenerateGuestToken("Alice")
+
+	// 1. Get VAPID public key
+	req := httptest.NewRequest("GET", "/api/push/vapid-key", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var vapidResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &vapidResp)
+	if vapidResp["publicKey"] == "" {
+		t.Fatal("expected non-empty public key")
+	}
+
+	// 2. Subscribe to push
+	subBody, _ := json.Marshal(pushSubscribeReq{
+		PlayerID: uid,
+		Endpoint: "https://push.example.com/test-sub",
+		P256dh:   "mock-p256dh",
+		Auth:     "mock-auth",
+		Platform: "web",
+	})
+	req = httptest.NewRequest("POST", "/api/push/subscribe", bytes.NewReader(subBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 3. Create a match including this player
+	createBody, _ := json.Marshal(createMatchReq{
+		MatchID: "m_my_1",
+		Seed:    300,
+		Players: []core.PlayerSetup{
+			{ID: core.PlayerID(uid), Name: "Alice", Character: "navigator"},
+			{ID: "p2", Name: "Bob", Character: "engineer"},
+		},
+	})
+	req = httptest.NewRequest("POST", "/api/lobby", bytes.NewReader(createBody))
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rec.Code)
+	}
+
+	// 4. List my matches
+	req = httptest.NewRequest("GET", "/api/matches/my?playerId="+uid, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var myMatches []playerMatchItem
+	_ = json.Unmarshal(rec.Body.Bytes(), &myMatches)
+	if len(myMatches) != 1 || myMatches[0].MatchID != "m_my_1" || myMatches[0].ActivePlayer == "" {
+		t.Fatalf("unexpected my matches: %+v", myMatches)
+	}
+}
+
+func TestReplayAndTelemetryAPI(t *testing.T) {
+	srv, _, _, _ := setupTestServer()
+	h := srv.Handler()
+
+	// 1. Create a match to populate events
+	createBody, _ := json.Marshal(createMatchReq{
+		MatchID: "m_replay_1",
+		Seed:    400,
+		Players: []core.PlayerSetup{
+			{ID: "p1", Name: "Alice", Character: "navigator"},
+			{ID: "p2", Name: "Bob", Character: "engineer"},
+		},
+	})
+	req := httptest.NewRequest("POST", "/api/lobby", bytes.NewReader(createBody))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rec.Code)
+	}
+
+	// 2. Fetch replay
+	req = httptest.NewRequest("GET", "/api/match/m_replay_1/replay", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var replay replayResponse
+	_ = json.Unmarshal(rec.Body.Bytes(), &replay)
+	if replay.MatchID != "m_replay_1" || replay.TotalEvents < 0 {
+		t.Fatalf("unexpected replay data: %+v", replay)
+	}
+
+	// 3. Report Telemetry
+	telemBody, _ := json.Marshal(telemetry.MatchReport{
+		MatchID:            "m_replay_1",
+		DurationSec:        750,
+		Status:             "won",
+		TotalRounds:        6,
+		FinalDarkness:      5,
+		PlayerCount:        2,
+		Characters:         []string{"navigator", "engineer"},
+		MonstersDefeated:   2,
+		ComponentsRepaired: 5,
+	})
+	req = httptest.NewRequest("POST", "/api/telemetry/report", bytes.NewReader(telemBody))
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	// 4. Fetch Telemetry Stats
+	req = httptest.NewRequest("GET", "/api/telemetry/stats", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var stats telemetry.GlobalStats
+	_ = json.Unmarshal(rec.Body.Bytes(), &stats)
+	if stats.TotalMatches <= 0 || stats.WinRatePercent <= 0 {
+		t.Fatalf("unexpected stats: %+v", stats)
 	}
 }

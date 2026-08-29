@@ -140,3 +140,69 @@ func TestMemoryStoreUserAuth(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestMemoryStoreAsyncAndPush(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryStore()
+
+	// 1. Player matches list
+	m1 := MatchRecord{ID: "m1", Status: "active", PlayerIDs: []string{"p1", "p2"}, TurnTimeoutSec: 86400, CreatedAt: time.Now()}
+	m2 := MatchRecord{ID: "m2", Status: "active", PlayerIDs: []string{"p2", "p3"}, TurnTimeoutSec: 86400, CreatedAt: time.Now()}
+	_ = s.CreateMatch(ctx, m1)
+	_ = s.CreateMatch(ctx, m2)
+
+	p1Matches, err := s.ListPlayerMatches(ctx, "p1")
+	if err != nil || len(p1Matches) != 1 {
+		t.Fatalf("expected 1 match for p1, got %d (err: %v)", len(p1Matches), err)
+	}
+
+	p2Matches, err := s.ListPlayerMatches(ctx, "p2")
+	if err != nil || len(p2Matches) != 2 {
+		t.Fatalf("expected 2 matches for p2, got %d (err: %v)", len(p2Matches), err)
+	}
+
+	// 2. Turn deadlines
+	now := time.Now()
+	expiredDeadline := TurnDeadline{MatchID: "m1", PlayerID: "p1", DeadlineAt: now.Add(-5 * time.Minute), Missed: 0}
+	futureDeadline := TurnDeadline{MatchID: "m2", PlayerID: "p2", DeadlineAt: now.Add(24 * time.Hour), Missed: 0}
+
+	if err := s.SetTurnDeadline(ctx, expiredDeadline); err != nil {
+		t.Fatalf("SetTurnDeadline failed: %v", err)
+	}
+	if err := s.SetTurnDeadline(ctx, futureDeadline); err != nil {
+		t.Fatalf("SetTurnDeadline failed: %v", err)
+	}
+
+	gotD, err := s.GetTurnDeadline(ctx, "m1")
+	if err != nil || gotD.PlayerID != "p1" {
+		t.Fatalf("GetTurnDeadline failed: %v, %+v", err, gotD)
+	}
+
+	expiredList, err := s.GetExpiredDeadlines(ctx, now)
+	if err != nil || len(expiredList) != 1 || expiredList[0].MatchID != "m1" {
+		t.Fatalf("expected 1 expired deadline for m1, got %d (err: %v)", len(expiredList), err)
+	}
+
+	if err := s.ClearTurnDeadline(ctx, "m1"); err != nil {
+		t.Fatalf("ClearTurnDeadline failed: %v", err)
+	}
+	if _, err := s.GetTurnDeadline(ctx, "m1"); err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound after clear, got %v", err)
+	}
+
+	// 3. Push subscriptions
+	sub1 := PushSubscription{PlayerID: "p1", Endpoint: "https://push.example.com/sub1", P256dh: "key1", Auth: "auth1", Platform: "web", CreatedAt: now}
+	sub2 := PushSubscription{PlayerID: "p1", Endpoint: "https://fcm.example.com/sub2", P256dh: "key2", Auth: "auth2", Platform: "fcm", CreatedAt: now}
+
+	if err := s.SavePushSubscription(ctx, sub1); err != nil {
+		t.Fatalf("SavePushSubscription failed: %v", err)
+	}
+	if err := s.SavePushSubscription(ctx, sub2); err != nil {
+		t.Fatalf("SavePushSubscription failed: %v", err)
+	}
+
+	subs, err := s.GetPushSubscriptions(ctx, "p1")
+	if err != nil || len(subs) != 2 {
+		t.Fatalf("expected 2 subscriptions for p1, got %d (err: %v)", len(subs), err)
+	}
+}

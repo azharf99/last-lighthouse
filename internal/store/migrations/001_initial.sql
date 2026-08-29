@@ -1,5 +1,5 @@
 -- 001_initial.sql
--- Skema PostgreSQL untuk The Last Lighthouse (ADR-004)
+-- Skema PostgreSQL untuk The Last Lighthouse (ADR-004, ADR-007)
 
 CREATE TABLE IF NOT EXISTS users (
     id          TEXT PRIMARY KEY,
@@ -36,5 +36,24 @@ CREATE TABLE IF NOT EXISTS match_snapshots (
     PRIMARY KEY (match_id, seq)
 );
 
+CREATE TABLE IF NOT EXISTS turn_deadlines (
+    match_id    TEXT PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE,
+    player_id   TEXT NOT NULL,
+    deadline_at TIMESTAMPTZ NOT NULL,
+    missed      INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    player_id   TEXT NOT NULL,
+    endpoint    TEXT NOT NULL,
+    p256dh      TEXT NOT NULL,
+    auth        TEXT NOT NULL,
+    platform    TEXT NOT NULL DEFAULT 'web',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (player_id, endpoint)
+);
+
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
+CREATE INDEX IF NOT EXISTS idx_matches_player_ids ON matches USING GIN (player_ids);
 CREATE INDEX IF NOT EXISTS idx_match_events_seq ON match_events(match_id, seq);
+CREATE INDEX IF NOT EXISTS idx_turn_deadlines_at ON turn_deadlines(deadline_at);
