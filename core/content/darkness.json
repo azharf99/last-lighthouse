@@ -1,0 +1,31 @@
+{
+  "start": 0,
+  "max": 8,
+  "rise_per_round": 1,
+  "thresholds": [
+    {
+      "at": 2,
+      "effect": "monster_move_bonus",
+      "amount": 1,
+      "note": "Monster bergerak 2 langkah, bukan 1"
+    },
+    {
+      "at": 4,
+      "effect": "gather_penalty",
+      "amount": 1,
+      "note": "Gather menghasilkan 1 lebih sedikit, minimum 1"
+    },
+    {
+      "at": 6,
+      "effect": "monster_spawn_per_round",
+      "amount": 1,
+      "note": "Satu monster muncul tiap ronde"
+    },
+    {
+      "at": 7,
+      "effect": "ap_penalty",
+      "amount": 1,
+      "note": "Pemain kehilangan 1 AP tiap giliran"
+    }
+  ]
+}

@@ -1,0 +1,709 @@
+/* Arah visual mengikuti GDD 35: laut dalam, kabut, batu tua, cahaya mercusuar
+   yang hangat. Mercusuar merepresentasikan harapan, Darkness merepresentasikan
+   ancaman -- jadi keduanya adalah dua kutub warna di sini, dan sisanya sengaja
+   diredam agar keduanya menonjol.
+
+   GDD 34 meminta kejelasan di atas kerumitan visual: seluruh informasi penting
+   terlihat tanpa membuka menu. Itu yang mengarahkan tata letaknya. */
+
+:root {
+  --abyss: #070d16;
+  --deep: #0d1725;
+  --panel: #131f30;
+  --panel-raised: #1a2a3f;
+  --stone: #2b3d54;
+  --stone-light: #3d5470;
+
+  --ink: #e8eef6;
+  --ink-dim: #93a6bd;
+  --ink-faint: #5f7591;
+
+  --beacon: #ffc76b;
+  --beacon-glow: rgba(255, 199, 107, 0.35);
+  --beacon-strong: #ffdb9c;
+
+  --dread: #b5476b;
+  --dread-deep: #6d1f38;
+
+  --wood: #b07f4a;
+  --metal: #9fb3c8;
+  --crystal: #7ad7e8;
+  --food: #8fc07a;
+
+  --ok: #6fcf97;
+
+  --radius: 10px;
+  --gap: 12px;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #16283f 0%, transparent 60%),
+    var(--abyss);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- Kerangka tata letak (GDD 34) ---------- */
+
+/* Tinggi ditentukan isi, bukan viewport.
+   Versi sebelumnya memakai height:100% + flex:1 pada baris bawah, dan itu
+   memaksa panel Pemain/Mercusuar/Catatan menyusut sampai 33px sementara isinya
+   butuh ~400px. Karena .panel memakai overflow:visible, isinya lalu tumpah
+   keluar kotaknya dan menimpa elemen lain. Membiarkan halaman men-scroll jauh
+   lebih baik daripada menjepit konten sampai keluar wadahnya. */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--gap);
+  gap: var(--gap);
+}
+
+.app__lower {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.05fr);
+  gap: var(--gap);
+  align-items: start; /* kolom setinggi isinya, tidak saling meregang */
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  /* Tanpa ini, teks panjang (nama lokasi, alasan Darkness) melebarkan grid
+     dan mendorong kolom sebelahnya keluar layar. */
+  min-width: 0;
+}
+
+.panel__title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 600;
+}
+
+/* ---------- Darkness track (GDD 22, 23) ---------- */
+
+.darkness {
+  background: linear-gradient(180deg, #1a1220, #100a14);
+  border: 1px solid var(--dread-deep);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.darkness__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.darkness__label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #d68aa4;
+  font-weight: 700;
+}
+
+.darkness__meta {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.darkness__track {
+  display: flex;
+  gap: 5px;
+}
+
+.darkness__step {
+  flex: 1;
+  height: 20px;
+  border-radius: 4px;
+  background: #1e1a26;
+  border: 1px solid #2e2436;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: #6a5c74;
+  position: relative;
+}
+
+.darkness__step--filled {
+  background: linear-gradient(180deg, var(--dread), var(--dread-deep));
+  border-color: var(--dread);
+  color: #ffe3ec;
+}
+
+.darkness__step--final {
+  border-color: var(--dread);
+  box-shadow: inset 0 0 0 1px rgba(181, 71, 107, 0.5);
+}
+
+.darkness__step--threshold::after {
+  content: '';
+  position: absolute;
+  inset-inline: 3px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 199, 107, 0.55);
+}
+
+.darkness__notes {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #c99;
+}
+
+/* ---------- Peta pulau ---------- */
+
+/* SVG dengan viewBox tumbuh sampai selebar induknya kalau tingginya dibiarkan
+   auto -- pada layar lebar itu membuat peta setinggi ~900px dan mendorong
+   seluruh panel bawah keluar layar. Tingginya dikunci; preserveAspectRatio
+   bawaan yang menyesuaikan skalanya. */
+.map__svg {
+  width: 100%;
+  height: clamp(240px, 40vh, 400px);
+  display: block;
+  touch-action: manipulation;
+}
+
+@media (max-width: 780px) {
+  .map__svg {
+    height: clamp(220px, 34vh, 320px);
+  }
+}
+
+.node__disc {
+  fill: var(--stone);
+  stroke: var(--stone-light);
+  stroke-width: 1.5;
+  transition: fill 120ms ease, stroke 120ms ease;
+}
+
+.node--reachable .node__disc {
+  fill: #2f4763;
+  stroke: var(--beacon);
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.node--reachable:hover .node__disc {
+  fill: #3b587b;
+}
+
+.node--lighthouse .node__disc {
+  fill: #43382a;
+}
+
+.node__icon {
+  font-size: 22px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* Label kini berada di luar lingkaran dan bisa melintasi garis adjacency.
+   paint-order:stroke menggambar garis tepi gelap lebih dulu lalu isinya di
+   atasnya, menghasilkan halo tipis supaya teks tetap terbaca di atas garis. */
+.node__label,
+.node__sub {
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.node__label {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.node__sub {
+  fill: var(--ink-dim);
+  font-size: 10px;
+}
+
+.node--reachable .node__label {
+  fill: var(--beacon-strong);
+}
+
+.edge {
+  stroke: var(--stone);
+  stroke-width: 2;
+}
+
+.pawn {
+  stroke: var(--abyss);
+  stroke-width: 1.5;
+}
+
+.pawn--active {
+  stroke: var(--beacon-strong);
+  stroke-width: 2.5;
+}
+
+.beacon-halo {
+  fill: var(--beacon);
+  opacity: 0.14;
+}
+
+/* ---------- Aksi ---------- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action {
+  background: linear-gradient(180deg, #2a3f5a, #1d2d42);
+  border: 1px solid var(--stone-light);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: transform 80ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.action:hover:not(:disabled) {
+  border-color: var(--beacon);
+  background: linear-gradient(180deg, #35506f, #24374f);
+}
+
+.action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action--primary {
+  border-color: var(--beacon);
+  box-shadow: 0 0 0 1px var(--beacon-glow);
+}
+
+.action--ghost {
+  background: transparent;
+  border-color: var(--stone);
+  color: var(--ink-dim);
+}
+
+.action__cost {
+  font-size: 11px;
+  color: var(--beacon);
+  border: 1px solid rgba(255, 199, 107, 0.35);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+/* ---------- Pemain ---------- */
+
+.seat {
+  border: 1px solid var(--stone);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.seat--active {
+  border-color: var(--beacon);
+  background: rgba(255, 199, 107, 0.07);
+}
+
+.seat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seat__name {
+  font-weight: 700;
+}
+
+.seat__role {
+  font-size: 11px;
+  color: var(--ink-dim);
+  text-transform: capitalize;
+}
+
+.seat__stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 3px;
+}
+
+.pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--stone-light);
+}
+
+.pip--on-ap {
+  background: var(--beacon);
+  border-color: var(--beacon);
+}
+
+.pip--on-hp {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+/* ---------- Inventory (GDD 9.1) ---------- */
+
+.inventory {
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+
+.slot {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px dashed var(--stone);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+}
+
+.slot--filled {
+  border-style: solid;
+  border-color: var(--stone-light);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.res-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--stone-light);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ---------- Mercusuar (GDD 7) ---------- */
+
+.component {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.component:last-child {
+  border-bottom: 0;
+}
+
+.component__order {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--stone-light);
+  color: var(--ink-dim);
+}
+
+.component--done .component__order {
+  background: var(--beacon);
+  border-color: var(--beacon);
+  color: #3a2708;
+}
+
+.component--next .component__order {
+  border-color: var(--beacon);
+  color: var(--beacon);
+  box-shadow: 0 0 0 3px var(--beacon-glow);
+}
+
+.component__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.component__name {
+  font-weight: 600;
+}
+
+.component--done .component__name {
+  color: var(--beacon);
+}
+
+.component__cost {
+  display: flex;
+  gap: 5px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.component__vp {
+  font-size: 12px;
+  color: var(--beacon);
+  white-space: nowrap;
+}
+
+/* ---------- Log ---------- */
+
+.log {
+  overflow-y: auto;
+  font-size: 12px;
+  min-height: 90px;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column-reverse;
+  overscroll-behavior: contain;
+}
+
+.log__line {
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim);
+}
+
+.log__line--danger {
+  color: #e58fa9;
+}
+
+.log__line--good {
+  color: var(--beacon);
+}
+
+/* ---------- Overlay ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 9, 16, 0.88);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.overlay__card {
+  background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+  border: 1px solid var(--stone-light);
+  border-radius: 14px;
+  padding: 26px 28px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.overlay__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.overlay__text {
+  color: var(--ink-dim);
+  margin: 0 0 18px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: #3a2030;
+  border: 1px solid var(--dread);
+  color: #ffd9e4;
+  padding: 9px 16px;
+  border-radius: 999px;
+  z-index: 30;
+  font-size: 13px;
+  cursor: pointer;
+  max-width: calc(100% - 32px);
+}
+
+.banner {
+  flex-direction: row; /* menimpa .panel yang column; tanpa ini tombol turun sendiri */
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.banner__turn {
+  font-size: 15px;
+}
+
+.banner__turn b {
+  color: var(--beacon);
+}
+
+.muted {
+  color: var(--ink-dim);
+}
+
+.tiny {
+  font-size: 11px;
+}
+
+/* ---------- Mobile: panel bersebelahan jadi bertumpuk (NFR 360x640) ---------- */
+
+@media (max-width: 780px) {
+  .app__lower {
+    grid-template-columns: 1fr;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    font-size: 15px;
+  }
+}
+
+/* ---------- M1: slot belum dijelajahi, monster, pilihan Mystery ---------- */
+
+.node--unexplored .node__disc {
+  fill: #1b2634;
+  stroke: var(--stone-light);
+  stroke-dasharray: 5 4;
+}
+
+.node--unexplored .node__icon {
+  fill: var(--ink-dim);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.node--unexplored.node--reachable .node__disc {
+  stroke: var(--beacon);
+  stroke-dasharray: 5 4;
+}
+
+/* Lokasi yang diblokir kartu Event (mis. Badai Besar) diberi rona merah, bukan
+   disembunyikan: pemain perlu melihat BAHWA ia diblokir untuk merencanakan. */
+.node--blocked .node__disc {
+  stroke: var(--dread);
+}
+
+.monster-badge {
+  fill: var(--dread-deep);
+  stroke: var(--dread);
+  stroke-width: 1.5;
+}
+
+.monster-badge__text {
+  fill: #ffd9e4;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.action--danger {
+  border-color: var(--dread);
+}
+
+.action--danger:hover:not(:disabled) {
+  border-color: #d96a8c;
+  background: linear-gradient(180deg, #4a2839, #331c27);
+}
+
+.overlay__card--wide {
+  max-width: 560px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  text-align: left;
+}
+
+/* Pilihan Mystery sengaja TIDAK menampilkan hasilnya (GDD 20): yang membuat
+   mekanik ini hidup adalah ketidaktahuan. Tombolnya karena itu dibuat lapang --
+   pemain sedang membaca dilema, bukan mengeksekusi perintah. */
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--stone-light);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--beacon);
+  background: rgba(255, 199, 107, 0.09);
+}
+
+.choice:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.choice__title {
+  font-weight: 600;
+}
+
+.choice__text {
+  font-size: 12px;
+  color: var(--ink-dim);
+}

@@ -1,0 +1,184 @@
+[
+  {
+    "id": "ev_heavy_storm",
+    "name": {
+      "en": "Heavy Storm",
+      "id": "Badai Besar"
+    },
+    "text": {
+      "en": "Coastal locations become dangerous.",
+      "id": "Lokasi pesisir menjadi berbahaya."
+    },
+    "effects": [
+      {
+        "op": "block_gather",
+        "tag": "coastal"
+      },
+      {
+        "op": "damage_at_tag",
+        "tag": "coastal",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_creeping_fog",
+    "name": {
+      "en": "Creeping Fog",
+      "id": "Kabut Merayap"
+    },
+    "text": {
+      "en": "The darkness thickens.",
+      "id": "Kegelapan menebal."
+    },
+    "effects": [
+      {
+        "op": "darkness",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_low_tide",
+    "name": {
+      "en": "Low Tide",
+      "id": "Air Surut"
+    },
+    "text": {
+      "en": "The harbor yields more than usual.",
+      "id": "Pelabuhan menghasilkan lebih banyak."
+    },
+    "effects": [
+      {
+        "op": "restock",
+        "tag": "coastal",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "ev_night_howls",
+    "name": {
+      "en": "Night Howls",
+      "id": "Lolongan Malam"
+    },
+    "text": {
+      "en": "Something stirs in the dark places.",
+      "id": "Sesuatu bergerak di tempat gelap."
+    },
+    "effects": [
+      {
+        "op": "spawn_monster",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_scavenged_supplies",
+    "name": {
+      "en": "Scavenged Supplies",
+      "id": "Perbekalan Temuan"
+    },
+    "text": {
+      "en": "Crates wash ashore.",
+      "id": "Peti-peti terdampar di pantai."
+    },
+    "effects": [
+      {
+        "op": "grant_all",
+        "resource": "food",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_collapsed_tunnel",
+    "name": {
+      "en": "Collapsed Tunnel",
+      "id": "Terowongan Runtuh"
+    },
+    "text": {
+      "en": "The mines are unstable.",
+      "id": "Tambang menjadi tidak stabil."
+    },
+    "effects": [
+      {
+        "op": "block_gather",
+        "tag": "underground"
+      }
+    ]
+  },
+  {
+    "id": "ev_calm_night",
+    "name": {
+      "en": "Calm Night",
+      "id": "Malam Tenang"
+    },
+    "text": {
+      "en": "A brief respite.",
+      "id": "Jeda singkat."
+    },
+    "effects": [
+      {
+        "op": "heal_all",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_the_light_flickers",
+    "name": {
+      "en": "The Light Flickers",
+      "id": "Cahaya Berkedip"
+    },
+    "text": {
+      "en": "The lighthouse strains against the dark.",
+      "id": "Mercusuar menahan kegelapan."
+    },
+    "effects": [
+      {
+        "op": "darkness",
+        "amount": 1
+      },
+      {
+        "op": "spawn_monster",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "ev_forest_bounty",
+    "name": {
+      "en": "Forest Bounty",
+      "id": "Limpahan Hutan"
+    },
+    "text": {
+      "en": "The woods are generous.",
+      "id": "Hutan sedang murah hati."
+    },
+    "effects": [
+      {
+        "op": "restock",
+        "tag": "wooded",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "ev_hollow_wind",
+    "name": {
+      "en": "Hollow Wind",
+      "id": "Angin Hampa"
+    },
+    "text": {
+      "en": "A cold wind saps your strength.",
+      "id": "Angin dingin menguras tenaga."
+    },
+    "effects": [
+      {
+        "op": "damage_all",
+        "amount": 1
+      }
+    ]
+  }
+]

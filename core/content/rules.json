@@ -1,0 +1,19 @@
+{
+  "action_points_per_turn": 3,
+  "max_health": 3,
+  "inventory_capacity": 6,
+  "exhausted_inventory_capacity": 3,
+  "gather_base_amount": 3,
+  "rest_heal_amount": 1,
+  "location_regen_per_round": 1,
+  "location_max_available_per_resource": 4,
+  "explore_reveal_resources": true,
+  "trade_max_per_action": 3,
+  "rescue_village_vp": 2,
+  "monster_defeat_vp": 1,
+  "artifact_base_vp": 1,
+  "guarantee_crystal_tile": true,
+  "extra_component_cost_per_extra_player": 2,
+  "explore_vp": 2,
+  "investigate_anywhere": true
+}

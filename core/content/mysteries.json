@@ -1,0 +1,543 @@
+[
+  {
+    "id": "my_abandoned_lab",
+    "name": {
+      "en": "The Abandoned Laboratory",
+      "id": "Laboratorium Terbengkalai"
+    },
+    "text": {
+      "en": "Beneath the ruins you find an old laboratory.",
+      "id": "Di bawah reruntuhan kau menemukan laboratorium tua."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Search thoroughly",
+          "id": "Geledah menyeluruh"
+        },
+        "effects": [
+          {
+            "op": "gain_artifact"
+          },
+          {
+            "op": "darkness",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Search carefully",
+          "id": "Geledah hati-hati"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "metal",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Leave it alone",
+          "id": "Tinggalkan saja"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_drowned_shrine",
+    "name": {
+      "en": "The Drowned Shrine",
+      "id": "Kuil Tenggelam"
+    },
+    "text": {
+      "en": "Cold water laps at a forgotten altar.",
+      "id": "Air dingin menjilat altar terlupakan."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Dive for the offering",
+          "id": "Selami persembahannya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "crystal",
+            "amount": 2
+          },
+          {
+            "op": "damage",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Pray at the edge",
+          "id": "Berdoa di tepinya"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Turn back",
+          "id": "Berbalik"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_keepers_journal",
+    "name": {
+      "en": "The Keeper's Journal",
+      "id": "Jurnal Sang Penjaga"
+    },
+    "text": {
+      "en": "Pages describe how the light was maintained.",
+      "id": "Halamannya menjelaskan cara merawat cahaya itu."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Read every page",
+          "id": "Baca seluruh halaman"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 3
+          },
+          {
+            "op": "darkness",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Skim for instructions",
+          "id": "Baca sekilas"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "wood",
+            "amount": 1
+          },
+          {
+            "op": "gain_resource",
+            "resource": "metal",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Close the book",
+          "id": "Tutup bukunya"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_hollow_tree",
+    "name": {
+      "en": "The Hollow Tree",
+      "id": "Pohon Berongga"
+    },
+    "text": {
+      "en": "Something has been living inside.",
+      "id": "Ada sesuatu yang tinggal di dalamnya."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Reach inside",
+          "id": "Raih ke dalam"
+        },
+        "effects": [
+          {
+            "op": "gain_artifact"
+          },
+          {
+            "op": "damage",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Chop it down",
+          "id": "Tebang pohonnya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "wood",
+            "amount": 3
+          },
+          {
+            "op": "spawn_monster",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Walk on",
+          "id": "Berjalan terus"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_stranded_survivor",
+    "name": {
+      "en": "A Stranded Survivor",
+      "id": "Penyintas Terdampar"
+    },
+    "text": {
+      "en": "Someone else made it to the island.",
+      "id": "Ada orang lain yang sampai ke pulau ini."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Share your food",
+          "id": "Bagikan makananmu"
+        },
+        "effects": [
+          {
+            "op": "pay_resource",
+            "resource": "food",
+            "amount": 1
+          },
+          {
+            "op": "gain_vp",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Ask what they saw",
+          "id": "Tanya apa yang mereka lihat"
+        },
+        "effects": [
+          {
+            "op": "reveal_tile"
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Say nothing",
+          "id": "Diam saja"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_crystal_vein",
+    "name": {
+      "en": "A Crystal Vein",
+      "id": "Urat Kristal"
+    },
+    "text": {
+      "en": "The rock glows faintly.",
+      "id": "Batunya bercahaya samar."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Cut it all out",
+          "id": "Bongkar semuanya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "crystal",
+            "amount": 3
+          },
+          {
+            "op": "darkness",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Take one shard",
+          "id": "Ambil satu serpih"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "crystal",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Seal the vein",
+          "id": "Tutup uratnya"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "my_watchers_cairn",
+    "name": {
+      "en": "The Watcher's Cairn",
+      "id": "Tugu Sang Pengawas"
+    },
+    "text": {
+      "en": "Stones stacked by careful hands.",
+      "id": "Batu-batu ditumpuk dengan hati-hati."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Dismantle it",
+          "id": "Bongkar tugunya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "metal",
+            "amount": 2
+          },
+          {
+            "op": "spawn_monster",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Add a stone",
+          "id": "Tambahkan satu batu"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Leave it standing",
+          "id": "Biarkan berdiri"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_signal_fire",
+    "name": {
+      "en": "The Signal Fire",
+      "id": "Api Isyarat"
+    },
+    "text": {
+      "en": "Old wood, still dry.",
+      "id": "Kayu tua, masih kering."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Light it",
+          "id": "Nyalakan"
+        },
+        "effects": [
+          {
+            "op": "pay_resource",
+            "resource": "wood",
+            "amount": 1
+          },
+          {
+            "op": "heal_all",
+            "amount": 1
+          },
+          {
+            "op": "gain_vp",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Salvage the wood",
+          "id": "Ambil kayunya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "wood",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Leave it",
+          "id": "Tinggalkan"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_sunken_crate",
+    "name": {
+      "en": "A Sunken Crate",
+      "id": "Peti Karam"
+    },
+    "text": {
+      "en": "Something washed in with the tide.",
+      "id": "Sesuatu terbawa arus."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Pry it open",
+          "id": "Congkel terbuka"
+        },
+        "effects": [
+          {
+            "op": "gain_artifact"
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Take the timber",
+          "id": "Ambil papannya"
+        },
+        "effects": [
+          {
+            "op": "gain_resource",
+            "resource": "wood",
+            "amount": 2
+          },
+          {
+            "op": "gain_resource",
+            "resource": "food",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Push it back out",
+          "id": "Dorong kembali ke laut"
+        },
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "my_whispering_dark",
+    "name": {
+      "en": "The Whispering Dark",
+      "id": "Bisikan Gelap"
+    },
+    "text": {
+      "en": "The shadows seem to offer something.",
+      "id": "Bayangan seolah menawarkan sesuatu."
+    },
+    "options": [
+      {
+        "id": "a",
+        "text": {
+          "en": "Listen",
+          "id": "Dengarkan"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 4
+          },
+          {
+            "op": "darkness",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": {
+          "en": "Refuse",
+          "id": "Menolak"
+        },
+        "effects": [
+          {
+            "op": "gain_vp",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "text": {
+          "en": "Flee",
+          "id": "Lari"
+        },
+        "effects": [
+          {
+            "op": "damage",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  }
+]

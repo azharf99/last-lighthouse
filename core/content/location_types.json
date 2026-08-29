@@ -1,0 +1,139 @@
+[
+  {
+    "id": "lighthouse",
+    "yields": {},
+    "name": {
+      "en": "Lighthouse",
+      "id": "Mercusuar"
+    },
+    "can_repair": true,
+    "can_heal": false,
+    "tags": []
+  },
+  {
+    "id": "harbor",
+    "yields": {
+      "wood": 1,
+      "food": 1
+    },
+    "name": {
+      "en": "Harbor",
+      "id": "Pelabuhan"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "tags": [
+      "coastal"
+    ]
+  },
+  {
+    "id": "village",
+    "yields": {
+      "food": 2,
+      "wood": 1
+    },
+    "name": {
+      "en": "Village",
+      "id": "Desa"
+    },
+    "can_repair": false,
+    "can_heal": true,
+    "tags": [
+      "settled"
+    ],
+    "rescuable": true
+  },
+  {
+    "id": "forest",
+    "yields": {
+      "wood": 3
+    },
+    "name": {
+      "en": "Forest",
+      "id": "Hutan"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "tags": [
+      "wooded"
+    ]
+  },
+  {
+    "id": "cave",
+    "yields": {
+      "metal": 3,
+      "crystal": 1
+    },
+    "name": {
+      "en": "Cave",
+      "id": "Gua"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "tags": [
+      "underground"
+    ]
+  },
+  {
+    "id": "crystal_cavern",
+    "yields": {
+      "crystal": 2
+    },
+    "name": {
+      "en": "Crystal Cavern",
+      "id": "Gua Kristal"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "darkness_on_gather": 1,
+    "tags": [
+      "underground"
+    ]
+  },
+  {
+    "id": "ruins",
+    "yields": {
+      "metal": 1
+    },
+    "name": {
+      "en": "Ancient Ruins",
+      "id": "Reruntuhan Kuno"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "can_investigate": true,
+    "tags": [
+      "ancient"
+    ]
+  },
+  {
+    "id": "mountain",
+    "yields": {
+      "metal": 2,
+      "crystal": 1
+    },
+    "name": {
+      "en": "Mountain",
+      "id": "Gunung"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "tags": [
+      "highland"
+    ]
+  },
+  {
+    "id": "temple",
+    "yields": {},
+    "name": {
+      "en": "Temple",
+      "id": "Kuil"
+    },
+    "can_repair": false,
+    "can_heal": false,
+    "can_investigate": true,
+    "tags": [
+      "ancient"
+    ]
+  }
+]

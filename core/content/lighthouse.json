@@ -1,0 +1,67 @@
+[
+  {
+    "id": "foundation",
+    "order": 1,
+    "vp": 3,
+    "cost": {
+      "wood": 1,
+      "metal": 1
+    },
+    "name": {
+      "en": "Foundation",
+      "id": "Fondasi"
+    }
+  },
+  {
+    "id": "power_core",
+    "order": 2,
+    "vp": 4,
+    "cost": {
+      "crystal": 1,
+      "metal": 1
+    },
+    "name": {
+      "en": "Power Core",
+      "id": "Inti Daya"
+    }
+  },
+  {
+    "id": "lens",
+    "order": 3,
+    "vp": 5,
+    "cost": {
+      "crystal": 2
+    },
+    "name": {
+      "en": "Lens",
+      "id": "Lensa"
+    }
+  },
+  {
+    "id": "mirror_array",
+    "order": 4,
+    "vp": 5,
+    "cost": {
+      "metal": 1,
+      "crystal": 1
+    },
+    "name": {
+      "en": "Mirror Array",
+      "id": "Susunan Cermin"
+    }
+  },
+  {
+    "id": "beacon",
+    "order": 5,
+    "vp": 7,
+    "cost": {
+      "wood": 1,
+      "crystal": 1,
+      "metal": 1
+    },
+    "name": {
+      "en": "Beacon",
+      "id": "Suar"
+    }
+  }
+]

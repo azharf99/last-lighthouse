@@ -1,0 +1,24 @@
+{
+  "base": {
+    "id": "shade",
+    "name": {
+      "en": "Shade",
+      "id": "Bayangan"
+    },
+    "damage": 1,
+    "vp": 1
+  },
+  "combat": {
+    "player_damaged_max": 2,
+    "standoff_max": 4,
+    "monster_defeated_min": 5
+  },
+  "spawn_on_explore_chance": 3,
+  "spawn_location_types": [
+    "cave",
+    "crystal_cavern",
+    "mountain",
+    "ruins",
+    "temple"
+  ]
+}

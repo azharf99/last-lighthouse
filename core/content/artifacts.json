@@ -1,0 +1,106 @@
+[
+  {
+    "id": "ar_ancient_compass",
+    "name": {
+      "en": "Ancient Compass",
+      "id": "Kompas Kuno"
+    },
+    "text": {
+      "en": "Once per turn, moving to an explored location is free.",
+      "id": "Sekali per giliran, pindah ke lokasi tereksplorasi menjadi gratis."
+    },
+    "effect": "free_move_per_turn",
+    "vp": 1
+  },
+  {
+    "id": "ar_aether_lantern",
+    "name": {
+      "en": "Aether Lantern",
+      "id": "Lentera Eter"
+    },
+    "text": {
+      "en": "Monsters cannot attack you at the Lighthouse.",
+      "id": "Monster tidak bisa menyerangmu di Mercusuar."
+    },
+    "effect": "safe_at_lighthouse",
+    "vp": 1
+  },
+  {
+    "id": "ar_forgotten_tool",
+    "name": {
+      "en": "Forgotten Tool",
+      "id": "Perkakas Terlupakan"
+    },
+    "text": {
+      "en": "Once per round, a repair costs 1 less resource.",
+      "id": "Sekali per ronde, satu perbaikan butuh 1 resource lebih sedikit."
+    },
+    "effect": "repair_discount_per_round",
+    "vp": 1
+  },
+  {
+    "id": "ar_black_pearl",
+    "name": {
+      "en": "Black Pearl",
+      "id": "Mutiara Hitam"
+    },
+    "text": {
+      "en": "Worth 5 VP at the end of the game.",
+      "id": "Bernilai 5 VP di akhir permainan."
+    },
+    "effect": "none",
+    "vp": 5
+  },
+  {
+    "id": "ar_tide_charm",
+    "name": {
+      "en": "Tide Charm",
+      "id": "Jimat Pasang"
+    },
+    "text": {
+      "en": "Gathering yields 1 more.",
+      "id": "Gathering menghasilkan 1 lebih banyak."
+    },
+    "effect": "gather_bonus",
+    "vp": 1
+  },
+  {
+    "id": "ar_iron_ward",
+    "name": {
+      "en": "Iron Ward",
+      "id": "Tameng Besi"
+    },
+    "text": {
+      "en": "+1 to your combat rolls.",
+      "id": "+1 pada lemparan combat-mu."
+    },
+    "effect": "combat_bonus",
+    "vp": 1
+  },
+  {
+    "id": "ar_pilgrims_pack",
+    "name": {
+      "en": "Pilgrim's Pack",
+      "id": "Ransel Peziarah"
+    },
+    "text": {
+      "en": "Carry 2 more resources.",
+      "id": "Bisa membawa 2 resource lebih banyak."
+    },
+    "effect": "capacity_bonus",
+    "vp": 1
+  },
+  {
+    "id": "ar_keepers_seal",
+    "name": {
+      "en": "Keeper's Seal",
+      "id": "Segel Penjaga"
+    },
+    "text": {
+      "en": "Worth 3 VP at the end of the game.",
+      "id": "Bernilai 3 VP di akhir permainan."
+    },
+    "effect": "none",
+    "vp": 3
+  }
+]

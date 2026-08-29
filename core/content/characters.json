@@ -1,0 +1,50 @@
+[
+  {
+    "id": "navigator",
+    "role": "exploration",
+    "name": {
+      "en": "The Navigator",
+      "id": "Sang Navigator"
+    },
+    "ability": {
+      "id": "pathfinder",
+      "note": "Explore gratis sekali per giliran"
+    }
+  },
+  {
+    "id": "engineer",
+    "role": "construction",
+    "name": {
+      "en": "The Engineer",
+      "id": "Sang Insinyur"
+    },
+    "ability": {
+      "id": "efficient_repair",
+      "note": "Kurangi 1 kebutuhan repair, sekali per ronde"
+    }
+  },
+  {
+    "id": "hunter",
+    "role": "combat",
+    "name": {
+      "en": "The Hunter",
+      "id": "Sang Pemburu"
+    },
+    "ability": {
+      "id": "predator",
+      "note": "+1 pada lemparan combat"
+    }
+  },
+  {
+    "id": "scholar",
+    "role": "investigation",
+    "name": {
+      "en": "The Scholar",
+      "id": "Sang Cendekia"
+    },
+    "ability": {
+      "id": "ancient_knowledge",
+      "note": "Tarik 2 Mystery, pilih 1, sekali per giliran"
+    }
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "the_savior",
+    "vp": 7,
+    "requirement": {
+      "kind": "rescue_villages",
+      "count": 2
+    },
+    "name": {
+      "en": "The Savior",
+      "id": "Sang Penyelamat"
+    }
+  },
+  {
+    "id": "the_collector",
+    "vp": 8,
+    "requirement": {
+      "kind": "acquire_artifacts",
+      "count": 3
+    },
+    "name": {
+      "en": "The Collector",
+      "id": "Sang Kolektor"
+    }
+  },
+  {
+    "id": "the_explorer",
+    "vp": 8,
+    "requirement": {
+      "kind": "explore_locations",
+      "count": 6
+    },
+    "name": {
+      "en": "The Explorer",
+      "id": "Sang Penjelajah"
+    }
+  },
+  {
+    "id": "the_guardian",
+    "vp": 7,
+    "requirement": {
+      "kind": "defeat_monsters",
+      "count": 4
+    },
+    "name": {
+      "en": "The Guardian",
+      "id": "Sang Penjaga"
+    }
+  },
+  {
+    "id": "the_builder",
+    "vp": 8,
+    "requirement": {
+      "kind": "contribute_repairs",
+      "count": 3
+    },
+    "name": {
+      "en": "The Builder",
+      "id": "Sang Pembangun"
+    }
+  },
+  {
+    "id": "the_hoarder",
+    "vp": 6,
+    "requirement": {
+      "kind": "hold_resources",
+      "count": 6
+    },
+    "name": {
+      "en": "The Hoarder",
+      "id": "Sang Penimbun"
+    }
+  },
+  {
+    "id": "the_survivor",
+    "vp": 6,
+    "requirement": {
+      "kind": "never_exhausted",
+      "count": 1
+    },
+    "name": {
+      "en": "The Survivor",
+      "id": "Sang Penyintas"
+    }
+  },
+  {
+    "id": "the_pillar",
+    "vp": 8,
+    "requirement": {
+      "kind": "contribute_resources",
+      "count": 10
+    },
+    "name": {
+      "en": "The Pillar",
+      "id": "Sang Pilar"
+    }
+  }
+]

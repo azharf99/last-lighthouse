@@ -1,0 +1,98 @@
+{
+  "start_location": "lighthouse",
+  "locations": [
+    {
+      "id": "lighthouse",
+      "type": "lighthouse",
+      "explored": true,
+      "adjacent": [
+        "harbor",
+        "forest"
+      ]
+    },
+    {
+      "id": "harbor",
+      "type": "harbor",
+      "explored": true,
+      "adjacent": [
+        "lighthouse",
+        "village",
+        "site_c"
+      ]
+    },
+    {
+      "id": "village",
+      "type": "village",
+      "explored": true,
+      "adjacent": [
+        "harbor",
+        "forest",
+        "ruins",
+        "site_c"
+      ]
+    },
+    {
+      "id": "forest",
+      "type": "forest",
+      "explored": true,
+      "adjacent": [
+        "lighthouse",
+        "village",
+        "cave"
+      ]
+    },
+    {
+      "id": "cave",
+      "type": "cave",
+      "explored": true,
+      "adjacent": [
+        "forest",
+        "ruins",
+        "site_b"
+      ]
+    },
+    {
+      "id": "ruins",
+      "type": "ruins",
+      "explored": true,
+      "adjacent": [
+        "village",
+        "cave",
+        "site_a"
+      ]
+    },
+    {
+      "id": "site_a",
+      "type": "",
+      "explored": false,
+      "adjacent": [
+        "ruins"
+      ]
+    },
+    {
+      "id": "site_b",
+      "type": "",
+      "explored": false,
+      "adjacent": [
+        "cave"
+      ]
+    },
+    {
+      "id": "site_c",
+      "type": "",
+      "explored": false,
+      "adjacent": [
+        "harbor",
+        "village"
+      ]
+    }
+  ],
+  "tile_stack": [
+    "crystal_cavern",
+    "mountain",
+    "temple",
+    "forest",
+    "village",
+    "cave"
+  ]
+}
