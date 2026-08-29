@@ -98,6 +98,8 @@ export function IslandMap({ state, legal, activePlayer, onMove, onExplore }: Pro
     occupants.set(p.at, list);
   }
 
+  const activePlayerObj = state.players.find((p) => p.id === activePlayer);
+  const currentLoc = activePlayerObj?.at;
   const repairedCount = state.lighthouse.filter((c) => c.repaired).length;
 
   return (
@@ -109,8 +111,20 @@ export function IslandMap({ state, legal, activePlayer, onMove, onExplore }: Pro
         {edges.map(([a, b]) => {
           const pa = pos(a);
           const pb = pos(b);
+          const isPathActive = Boolean(
+            currentLoc &&
+              ((a === currentLoc && (reachable.has(b) || explorableSet.has(b))) ||
+                (b === currentLoc && (reachable.has(a) || explorableSet.has(a)))),
+          );
           return (
-            <line key={`${a}-${b}`} className="edge" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
+            <line
+              key={`${a}-${b}`}
+              className={`edge ${isPathActive ? 'edge--active' : ''}`}
+              x1={pa.x}
+              y1={pa.y}
+              x2={pb.x}
+              y2={pb.y}
+            />
           );
         })}
 

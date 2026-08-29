@@ -257,13 +257,16 @@ button {
   font-size: 10px;
 }
 
-.node--reachable .node__label {
-  fill: var(--beacon-strong);
-}
-
 .edge {
   stroke: var(--stone);
   stroke-width: 2;
+  transition: stroke 150ms ease, stroke-width 150ms ease, opacity 150ms ease;
+}
+
+.edge--active {
+  stroke: var(--beacon);
+  stroke-width: 3.5;
+  opacity: 0.95;
 }
 
 .pawn {
