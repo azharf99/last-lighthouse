@@ -1,9 +1,20 @@
 # ==========================================================
 # Multi-Stage Build: The Last Lighthouse - Frontend Client
-# Base: Node Alpine (Builder) -> Nginx Alpine (Runner)
+# Base: Golang (WASM) -> Node Alpine (Builder) -> Nginx Alpine (Runner)
 # ==========================================================
 
-# Stage 1: Build static assets
+# Stage 1: Build Go WebAssembly Core
+FROM golang:1.24-alpine AS wasm-builder
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN mkdir -p /wasm && \
+    GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o /wasm/core.wasm ./cmd/wasm && \
+    (cp $(go env GOROOT)/lib/wasm/wasm_exec.js /wasm/wasm_exec.js 2>/dev/null || cp $(go env GOROOT)/misc/wasm/wasm_exec.js /wasm/wasm_exec.js 2>/dev/null)
+
+# Stage 2: Build static assets
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -15,10 +26,13 @@ RUN npm ci
 # Copy client source code
 COPY client/ ./
 
+# Copy compiled WASM runtime & binary into public directory
+COPY --from=wasm-builder /wasm/* ./public/wasm/
+
 # Build production bundle
 RUN npm run build
 
-# Stage 2: Serve static files with Nginx Alpine
+# Stage 3: Serve static files with Nginx Alpine
 FROM nginx:1.27-alpine
 
 # Remove default nginx static assets

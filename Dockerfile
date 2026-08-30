@@ -3,23 +3,31 @@
 # The Last Lighthouse (Server + Embedded Static Client)
 # ==========================================================
 
-# Stage 1: Build Client Assets
-FROM node:22-alpine AS client-builder
-WORKDIR /app
-COPY client/package.json client/package-lock.json ./
-RUN npm ci
-COPY client/ ./
-RUN npm run build
-
-# Stage 2: Build Go Server
+# Stage 1: Build Go Server & WASM Binary
 FROM golang:1.24-alpine AS server-builder
 RUN apk add --no-cache git ca-certificates tzdata
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+
+# Build Go Server binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /bin/lastlighthouse-server ./cmd/server
+
+# Build WASM binary and copy wasm_exec.js runtime shim
+RUN mkdir -p /wasm && \
+    GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o /wasm/core.wasm ./cmd/wasm && \
+    (cp $(go env GOROOT)/lib/wasm/wasm_exec.js /wasm/wasm_exec.js 2>/dev/null || cp $(go env GOROOT)/misc/wasm/wasm_exec.js /wasm/wasm_exec.js 2>/dev/null)
+
+# Stage 2: Build Client Assets
+FROM node:22-alpine AS client-builder
+WORKDIR /app
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+COPY client/ ./
+COPY --from=server-builder /wasm/* ./public/wasm/
+RUN npm run build
 
 # Stage 3: Final Runner Container (Nginx Alpine Reverse Proxy + Server)
 FROM alpine:3.21
