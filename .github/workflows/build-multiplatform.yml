@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # 1. Core Go Tests & WASM Verification
   test-core-and-wasm:
@@ -55,6 +58,8 @@ jobs:
   build-desktop-tauri:
     name: Build Desktop Tauri (${{ matrix.platform }})
     needs: test-core-and-wasm
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -107,10 +112,22 @@ jobs:
         with:
           projectPath: './client'
           tagName: v__VERSION__
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseName: 'The Last Lighthouse v__VERSION__'
+          releaseBody: 'Release build for The Last Lighthouse desktop multiplatform application.'
           releaseDraft: true
           prerelease: false
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: |
+            client/src-tauri/target/release/bundle/dmg/*.dmg
+            client/src-tauri/target/release/bundle/msi/*.msi
+            client/src-tauri/target/release/bundle/deb/*.deb
+            client/src-tauri/target/release/bundle/appimage/*.AppImage
+            client/src-tauri/target/release/bundle/macos/*.app
+          if-no-files-found: ignore
 
   # 3. Mobile Capacitor Validation (Android)
   validate-mobile-capacitor:
