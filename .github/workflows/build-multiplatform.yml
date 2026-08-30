@@ -33,10 +33,10 @@ jobs:
           name: wasm-assets
           path: client/public/wasm/
 
-      - name: Setup Node.js
+      - name: Setup Node.js (LTS 22)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 
@@ -76,10 +76,10 @@ jobs:
           name: wasm-assets
           path: client/public/wasm/
 
-      - name: Setup Node.js
+      - name: Setup Node.js (LTS 22)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 
@@ -127,10 +127,10 @@ jobs:
           name: wasm-assets
           path: client/public/wasm/
 
-      - name: Setup Node.js
+      - name: Setup Node.js (LTS 22)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 
@@ -143,5 +143,7 @@ jobs:
         working-directory: client
 
       - name: Sync Capacitor Web Assets
-        run: npx cap sync
+        run: |
+          npx cap add android || true
+          npx cap sync
         working-directory: client
