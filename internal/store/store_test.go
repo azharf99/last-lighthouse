@@ -206,3 +206,50 @@ func TestMemoryStoreAsyncAndPush(t *testing.T) {
 		t.Fatalf("expected 2 subscriptions for p1, got %d (err: %v)", len(subs), err)
 	}
 }
+
+func TestMemoryStoreLeaderboard(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryStore()
+
+	// Initial seeded baseline should not be empty
+	initial, err := s.GetLeaderboard(ctx, "vp", 10)
+	if err != nil || len(initial) == 0 {
+		t.Fatalf("expected seeded leaderboard, got %v (err: %v)", len(initial), err)
+	}
+
+	entry := LeaderboardEntry{
+		ID:                    "test_lb_01",
+		PlayerName:            "Pahlawan Uji",
+		Character:             "navigator",
+		VP:                    99,
+		Darkness:              3,
+		Rounds:                4,
+		Won:                   true,
+		MonstersSlain:         10,
+		ComponentsContributed: 5,
+		MatchID:               "m_test",
+	}
+
+	if err := s.AddLeaderboardEntry(ctx, entry); err != nil {
+		t.Fatalf("AddLeaderboardEntry failed: %v", err)
+	}
+
+	// 1. Check VP sort (highest first)
+	topVP, err := s.GetLeaderboard(ctx, "vp", 5)
+	if err != nil || len(topVP) == 0 || topVP[0].ID != "test_lb_01" {
+		t.Fatalf("expected top VP entry to be test_lb_01, got %+v (err: %v)", topVP[0], err)
+	}
+
+	// 2. Check Speed sort (lowest rounds won first)
+	speedList, err := s.GetLeaderboard(ctx, "speed", 5)
+	if err != nil || len(speedList) == 0 || speedList[0].ID != "test_lb_01" {
+		t.Fatalf("expected fastest win to be test_lb_01 (4 rounds), got %+v (err: %v)", speedList[0], err)
+	}
+
+	// 3. Check Monsters slain sort
+	slayerList, err := s.GetLeaderboard(ctx, "monsters", 5)
+	if err != nil || len(slayerList) == 0 || slayerList[0].ID != "test_lb_01" {
+		t.Fatalf("expected top monster slayer to be test_lb_01, got %+v (err: %v)", slayerList[0], err)
+	}
+}
+

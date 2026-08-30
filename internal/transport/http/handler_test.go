@@ -282,3 +282,60 @@ func TestReplayAndTelemetryAPI(t *testing.T) {
 		t.Fatalf("unexpected stats: %+v", stats)
 	}
 }
+
+func TestLeaderboardAPI(t *testing.T) {
+	srv, _, _, _ := setupTestServer()
+	h := srv.Handler()
+
+	// 1. Get initial leaderboard
+	req := httptest.NewRequest("GET", "/api/leaderboard?category=vp&limit=5", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var list []store.LeaderboardEntry
+	_ = json.Unmarshal(rec.Body.Bytes(), &list)
+	if len(list) == 0 {
+		t.Fatal("expected non-empty initial leaderboard")
+	}
+
+	// 2. Submit new entry
+	newEntry := store.LeaderboardEntry{
+		PlayerName:            "Sultan Mercusuar",
+		Character:             "scholar",
+		VP:                    30,
+		Darkness:              4,
+		Rounds:                6,
+		Won:                   true,
+		MonstersSlain:         4,
+		ComponentsContributed: 4,
+		MatchID:               "m_custom_win",
+	}
+	body, _ := json.Marshal(newEntry)
+	req = httptest.NewRequest("POST", "/api/leaderboard", bytes.NewReader(body))
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 3. Verify entry appears at top of VP leaderboard
+	req = httptest.NewRequest("GET", "/api/leaderboard?category=vp&limit=5", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var updated []store.LeaderboardEntry
+	_ = json.Unmarshal(rec.Body.Bytes(), &updated)
+	if len(updated) == 0 || updated[0].PlayerName != "Sultan Mercusuar" || updated[0].VP != 30 {
+		t.Fatalf("expected Sultan Mercusuar as top entry, got %+v", updated)
+	}
+}
+

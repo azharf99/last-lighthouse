@@ -49,11 +49,28 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     p256dh      TEXT NOT NULL,
     auth        TEXT NOT NULL,
     platform    TEXT NOT NULL DEFAULT 'web',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (player_id, endpoint)
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS leaderboard (
+    id                     TEXT PRIMARY KEY,
+    player_name            TEXT NOT NULL,
+    character              TEXT NOT NULL,
+    vp                     INT NOT NULL DEFAULT 0,
+    darkness               INT NOT NULL DEFAULT 0,
+    rounds                 INT NOT NULL DEFAULT 1,
+    won                    BOOLEAN NOT NULL DEFAULT false,
+    monsters_slain         INT NOT NULL DEFAULT 0,
+    components_contributed INT NOT NULL DEFAULT 0,
+    match_id               TEXT NOT NULL,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
 CREATE INDEX IF NOT EXISTS idx_matches_player_ids ON matches USING GIN (player_ids);
 CREATE INDEX IF NOT EXISTS idx_match_events_seq ON match_events(match_id, seq);
 CREATE INDEX IF NOT EXISTS idx_turn_deadlines_at ON turn_deadlines(deadline_at);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_vp ON leaderboard(vp DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_rounds ON leaderboard(rounds ASC, vp DESC) WHERE won = true;
+CREATE INDEX IF NOT EXISTS idx_leaderboard_monsters ON leaderboard(monsters_slain DESC, vp DESC);
+

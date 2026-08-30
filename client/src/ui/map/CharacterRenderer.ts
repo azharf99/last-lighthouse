@@ -1,169 +1,90 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
-import type { CharacterID } from '../../types';
+import { Container, Graphics } from 'pixi.js';
+import { createPixelLabel } from './PixelFont';
 
-export const CHARACTER_THEMES: Record<
-  CharacterID | string,
-  {
-    name: string;
-    primaryColor: number;
-    secondaryColor: number;
-    accentColor: number;
-    icon: string;
-  }
-> = {
-  navigator: {
-    name: 'Navigator',
-    primaryColor: 0x1d3557, // Navy coat
-    secondaryColor: 0x457b9d, // Ocean blue
-    accentColor: 0xffc76b, // Golden brass
-    icon: '🧭',
-  },
-  engineer: {
-    name: 'Insinyur',
-    primaryColor: 0x6c584c, // Leather apron
-    secondaryColor: 0x7ad7e8, // Cyan energy
-    accentColor: 0xb07f4a, // Copper bronze
-    icon: '⚙️',
-  },
-  hunter: {
-    name: 'Pemburu',
-    primaryColor: 0x800e13, // Deep crimson cloak
-    secondaryColor: 0x283618, // Forest green
-    accentColor: 0xe58fa9, // Rose leather
-    icon: '🏹',
-  },
-  scholar: {
-    name: 'Cendekia',
-    primaryColor: 0x1b4332, // Sage emerald robe
-    secondaryColor: 0x2d6a4f, // Jade sash
-    accentColor: 0x8fc07a, // Light rune
-    icon: '📜',
-  },
+export const CHARACTER_THEMES: Record<string, { name: string; primaryColor: number; secondaryColor: number; accentColor: number; icon: string }> = {
+  navigator: { name: 'Navigator', primaryColor: 0x3978a8, secondaryColor: 0x394778, accentColor: 0xf7e26b, icon: '🧭' },
+  engineer: { name: 'Engineer', primaryColor: 0xb86f50, secondaryColor: 0x73402e, accentColor: 0xffc76b, icon: '🔧' },
+  hunter: { name: 'Hunter', primaryColor: 0xb13e53, secondaryColor: 0x3b1443, accentColor: 0x38b764, icon: '🏹' },
+  scholar: { name: 'Scholar', primaryColor: 0x38b764, secondaryColor: 0x257179, accentColor: 0xf4f4f4, icon: '📜' },
 };
 
-/**
- * Creates an illustrated tabletop standee miniature container for a humanoid character.
- */
+function drawPixelRect(g: Graphics, x: number, y: number, w: number, h: number, color: number) {
+  g.rect(x * 3, y * 3, w * 3, h * 3).fill(color);
+}
+
 export function createHumanoidStandee(
   characterId: string,
   playerColor: number,
   isActive: boolean,
   isExhausted: boolean,
-  playerName: string,
+  playerName: string
 ): Container {
   const container = new Container();
   const theme = CHARACTER_THEMES[characterId] || CHARACTER_THEMES.navigator;
+  
+  const g = new Graphics();
+  container.addChild(g);
 
-  // 1. Pedestal Base (Wooden Mini Standee Base)
-  const base = new Graphics();
-  base.ellipse(0, 0, 18, 7).fill({ color: 0x182435 }).stroke({ width: 1.5, color: playerColor });
-  container.addChild(base);
+  // Gray out if exhausted
+  const primary = isExhausted ? 0x5a6988 : theme.primaryColor;
+  const secondary = isExhausted ? 0x3a4466 : theme.secondaryColor;
+  const accent = isExhausted ? 0xf4f4f4 : theme.accentColor;
+  const skin = isExhausted ? 0x5a6988 : 0xf2c8a0;
 
-  // Active Player Glowing Halo Ring
+  const offsetX = -3;
+  const offsetY = -12;
+
+  // Active glowing halo
   if (isActive) {
-    const halo = new Graphics();
-    halo.ellipse(0, 0, 22, 9).stroke({ width: 2, color: 0xffc76b, alpha: 0.95 });
-    container.addChild(halo);
+    g.ellipse(0, 5, 12, 6).stroke({ width: 2, color: 0xffc76b });
+    // Bouncing arrow
+    const t = Date.now() / 200;
+    const bounce = Math.sin(t) * 2;
+    drawPixelRect(g, offsetX + 1, offsetY - 6 + bounce, 4, 1, 0xffc76b);
+    drawPixelRect(g, offsetX + 2, offsetY - 5 + bounce, 2, 1, 0xffc76b);
   }
 
-  // 2. Humanoid Body Group (Height ~44px from base Y: 0 to top Y: -44)
-  const body = new Graphics();
+  // Shadow
+  g.ellipse(0, 3, 8, 4).fill(0x181425);
 
-  // Shadow under standee
-  body.ellipse(0, -1, 12, 4).fill({ color: 0x070d16, alpha: 0.6 });
+  // Feet
+  drawPixelRect(g, offsetX + 1, offsetY + 11, 2, 1, 0x181425);
+  drawPixelRect(g, offsetX + 3, offsetY + 11, 2, 1, 0x181425);
 
-  // Legs / Boots
-  body.roundRect(-7, -12, 5, 12, 2).fill({ color: 0x111927 });
-  body.roundRect(2, -12, 5, 12, 2).fill({ color: 0x111927 });
-
-  // Torso / Tunic
-  body
-    .roundRect(-9, -28, 18, 18, 4)
-    .fill({ color: isExhausted ? 0x3d4a58 : theme.primaryColor })
-    .stroke({ width: 1, color: theme.secondaryColor });
-
-  // Belt & Buckle
-  body.rect(-9, -15, 18, 3).fill({ color: 0x2b1d0c });
-  body.rect(-2, -16, 4, 5).fill({ color: 0xffc76b });
-
-  // Head / Face
-  body.circle(0, -34, 6.5).fill({ color: 0xfbd1a2 }); // Skin tone
-
-  // Character-specific Gear, Hats, Cloaks & Props
+  // Body
+  drawPixelRect(g, offsetX + 1, offsetY + 5, 4, 6, primary);
+  
+  // Details
   if (characterId === 'navigator') {
-    // Navigator: Tricorn explorer hat + Brass Compass + Spyglass
-    body
-      .poly([
-        { x: -11, y: -38 },
-        { x: 11, y: -38 },
-        { x: 0, y: -45 },
-      ])
-      .fill({ color: 0x0f1c2e })
-      .stroke({ width: 1, color: 0xffc76b });
-
-    // Compass in right hand
-    body.circle(9, -20, 4).fill({ color: 0xffc76b }).stroke({ width: 1, color: 0xffffff });
-    // Spyglass on left hip
-    body.rect(-12, -22, 3, 10).fill({ color: 0xcaa363 });
+    drawPixelRect(g, offsetX + 2, offsetY + 6, 2, 2, accent);
+    drawPixelRect(g, offsetX, offsetY + 1, 6, 2, secondary); // Hat
+    drawPixelRect(g, offsetX + 1, offsetY, 4, 1, secondary);
   } else if (characterId === 'engineer') {
-    // Engineer: Copper goggles on forehead + Iron wrench
-    body.roundRect(-7, -40, 14, 5, 2).fill({ color: 0xb07f4a });
-    body.circle(-3, -38, 2.5).fill({ color: 0x7ad7e8 });
-    body.circle(3, -38, 2.5).fill({ color: 0x7ad7e8 });
-
-    // Big wrench in hand
-    body.rect(8, -26, 3, 14).fill({ color: 0x8f9ba8 });
-    body.circle(9.5, -28, 4).fill({ color: 0x8f9ba8 });
-    body.circle(9.5, -28, 2).fill({ color: theme.primaryColor });
+    drawPixelRect(g, offsetX + 1, offsetY + 5, 4, 3, secondary); // Apron
+    drawPixelRect(g, offsetX + 2, offsetY + 2, 2, 1, accent); // Goggles
   } else if (characterId === 'hunter') {
-    // Hunter: Hooded ranger cloak + Bow across back + Dagger
-    body.circle(0, -35, 8.5).fill({ color: theme.primaryColor }); // Hood
-    body.circle(0, -34, 5.5).fill({ color: 0xfbd1a2 }); // Face inside hood
-
-    // Bow curve on back
-    body
-      .arc(-7, -26, 12, -Math.PI / 2, Math.PI / 2)
-      .stroke({ width: 2, color: 0x6f4e37 });
-    // Hunting Dagger in hand
-    body.rect(8, -18, 2.5, 9).fill({ color: 0xd8e2dc });
-    body.rect(7, -19, 4.5, 2).fill({ color: 0x4a5568 });
+    drawPixelRect(g, offsetX, offsetY + 1, 6, 4, primary); // Hood
+    drawPixelRect(g, offsetX, offsetY + 5, 1, 6, secondary); // Bow
   } else if (characterId === 'scholar') {
-    // Scholar: Robe cowl + Ancient parchment scroll + glowing flask
-    body.poly([
-      { x: -8, y: -41 },
-      { x: 8, y: -41 },
-      { x: 0, y: -46 },
-    ]).fill({ color: 0x1b4332 });
-
-    // Scroll in right hand
-    body.roundRect(7, -23, 6, 11, 2).fill({ color: 0xf4f1de }).stroke({ width: 1, color: 0xb07f4a });
-    // Glowing Crystal vial in left hand
-    body.circle(-9, -20, 3.5).fill({ color: 0x7ad7e8, alpha: 0.9 });
+    drawPixelRect(g, offsetX + 1, offsetY + 5, 4, 7, primary); // Robe
+    drawPixelRect(g, offsetX + 4, offsetY + 8, 1, 2, accent); // Scroll
   }
 
-  container.addChild(body);
+  // Head
+  drawPixelRect(g, offsetX + 1, offsetY + 2, 4, 3, skin);
+  // Eyes
+  drawPixelRect(g, offsetX + 1, offsetY + 3, 1, 1, 0x181425);
+  drawPixelRect(g, offsetX + 3, offsetY + 3, 1, 1, 0x181425);
 
-  // 3. Floating Player Name Tag (under miniature base)
-  const nameStyle = new TextStyle({
-    fontSize: 9.5,
-    fontWeight: isActive ? 'bold' : 'normal',
-    fill: isActive ? 0xffc76b : 0xe8eef6,
-    fontFamily: 'Segoe UI, sans-serif',
-  });
-  const nameText = new Text({ text: playerName, style: nameStyle });
-  nameText.anchor.set(0.5, 0);
-  nameText.y = 7;
-  container.addChild(nameText);
+  // Name Label
+  const nameLabel = createPixelLabel(playerName, playerColor);
+  nameLabel.y = 12;
+  container.addChild(nameLabel);
 
-  // Exhausted indicator icon
   if (isExhausted) {
-    const exText = new Text({
-      text: '💤',
-      style: new TextStyle({ fontSize: 10 }),
-    });
-    exText.x = 8;
-    exText.y = -44;
-    container.addChild(exText);
+    const zzz = createPixelLabel('zzZ', 0xf4f4f4);
+    zzz.y = -40;
+    container.addChild(zzz);
   }
 
   return container;

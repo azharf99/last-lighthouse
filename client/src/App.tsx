@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useGameSession, type SeatConfig, type GameSession } from './session/useGameSession';
 import { useOnlineSession } from './session/useOnlineSession';
 import { api, type MatchSummary } from './session/api';
-import { DarknessTrack } from './ui/DarknessTrack';
 import { IslandMapCanvas } from './ui/map/IslandMapCanvas';
 import { IslandMap } from './ui/IslandMap';
 import { PlayerPanel } from './ui/PlayerPanel';
@@ -17,6 +16,13 @@ import { MatchHubPanel } from './ui/MatchHubPanel';
 import { ReplayModal } from './ui/ReplayModal';
 import { TelemetryModal } from './ui/TelemetryModal';
 import { TutorialModal } from './ui/TutorialModal';
+import { AchievementsModal } from './ui/AchievementsModal';
+import { AchievementToast } from './ui/AchievementToast';
+import { achievementManager } from './achievements/achievements';
+import { leaderboardApi } from './session/leaderboard';
+import { FloatingHUD } from './ui/FloatingHUD';
+import { PixelModal } from './ui/PixelModal';
+import { useKeyboardNav } from './ui/map/useKeyboardNav';
 import { registerServiceWorker } from './session/pushManager';
 import { sfx } from './audio/sfx';
 import { i18n } from './i18n';
@@ -50,7 +56,19 @@ export default function App() {
   const [showCombatModal, setShowCombatModal] = useState<boolean>(false);
   const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState<boolean>(false);
+  const [achievementsTab, setAchievementsTab] = useState<'achievements' | 'leaderboard' | 'stats'>('achievements');
   const [replayMatchId, setReplayMatchId] = useState<string | null>(null);
+
+  const gameEndEvaluatedRef = useRef<string | null>(null);
+
+  // Retro HUD modal states
+  const [showActionsModal, setShowActionsModal] = useState<boolean>(false);
+  const [showPlayersModal, setShowPlayersModal] = useState<boolean>(false);
+  const [showLighthouseModal, setShowLighthouseModal] = useState<boolean>(false);
+  const [showLogModal, setShowLogModal] = useState<boolean>(false);
+  const [showCardsModal, setShowCardsModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
   // Active seats
   const [seats, setSeats] = useState<SeatConfig[]>(DEFAULT_SEATS);
@@ -151,75 +169,122 @@ export default function App() {
     }
   }, [playMode, onlineMatchId]);
 
-  // Online Lobby UI Screen
+  // Game state shortcuts
+  const isInGame = game.phase === 'ready' && game.view && !game.awaitingHandoff;
+  const st = game.view?.state;
+  const activeId = st?.status === 'active' ? (st.turnOrder[st.activeIdx] ?? null) : null;
+  const over = st?.status === 'won' || st?.status === 'lost';
+
+  // Listen to live events for achievement tracking
+  useEffect(() => {
+    if (game.log && game.log.length > 0 && st) {
+      achievementManager.processEvents(game.log, st, myPlayerId || activeId);
+    }
+  }, [game.log, st, myPlayerId, activeId]);
+
+  // Handle game end achievements & leaderboard submission
+  useEffect(() => {
+    if (!st) return;
+    const isOver = st.status === 'won' || st.status === 'lost';
+    const matchKey = `${st.matchId || 'match'}-${st.round}-${st.darkness}-${st.status}`;
+
+    if (isOver && gameEndEvaluatedRef.current !== matchKey) {
+      gameEndEvaluatedRef.current = matchKey;
+      // Process game end achievements
+      achievementManager.processGameEnd(st, myPlayerId || activeId);
+
+      // Submit all player scores to leaderboard
+      st.players.forEach((p) => {
+        void leaderboardApi.submitEntry({
+          playerName: p.name || displayName || 'Pemain',
+          character: p.character,
+          vp: p.vp,
+          darkness: st.darkness,
+          rounds: st.round,
+          won: st.status === 'won',
+          monstersSlain: p.monstersSlain || 0,
+          componentsContributed: p.repairsJoined || 0,
+          matchId: st.matchId || 'match',
+        });
+      });
+    }
+  }, [st, myPlayerId, activeId, displayName]);
+
+  // Close all HUD modals helper
+  const closeAllModals = useCallback(() => {
+    setShowActionsModal(false);
+    setShowPlayersModal(false);
+    setShowLighthouseModal(false);
+    setShowLogModal(false);
+    setShowCardsModal(false);
+    setShowSettingsModal(false);
+    setShowAchievementsModal(false);
+  }, []);
+
+  const anyModalOpen =
+    showActionsModal || showPlayersModal || showLighthouseModal ||
+    showLogModal || showCardsModal || showSettingsModal ||
+    showCombatModal || showSetupModal || showTutorialModal || showTelemetryModal || showAchievementsModal;
+
+  const keyboardCallbacks = useMemo(
+    () => ({
+      onMove: (to: string) => {
+        if (activeId) {
+          sfx.playMove();
+          game.send({ kind: 'move', player: activeId, to });
+        }
+      },
+      onExplore: (to: string) => {
+        if (activeId) {
+          sfx.playMove();
+          game.send({ kind: 'explore', player: activeId, to });
+        }
+      },
+      onOpenActions: () => setShowActionsModal(true),
+      onCloseModal: () => closeAllModals(),
+    }),
+    [activeId, game, closeAllModals],
+  );
+
+  useKeyboardNav(
+    st ?? null,
+    game.legal,
+    activeId,
+    Boolean(isInGame && !over && !anyModalOpen),
+    keyboardCallbacks,
+  );
+
+  const send = (cmd: Command) => game.send(cmd);
+
+  // ========================================
+  // Online Lobby UI (uses app--lobby class)
+  // ========================================
   if (playMode === 'online' && !onlineMatchId) {
     return (
-      <div className="app">
+      <div className="app app--lobby">
         <div className="panel banner">
           <span className="banner__turn">
-            <b>{i18n.t('app.title')} — Lobby Online (M2/M3)</b>
+            <b>{i18n.t('app.title')} — Lobby Online</b>
           </span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              className="action action--ghost"
-              onClick={() => {
-                sfx.playClick();
-                setShowTutorialModal(true);
-              }}
-              aria-label="📖 Panduan - Cara Bermain"
-              data-testid="btn-tutorial"
-            >
-              📖 Panduan
-            </button>
-            <button
-              className="action action--ghost"
-              onClick={() => {
-                sfx.playClick();
-                setShowTelemetryModal(true);
-              }}
-              aria-label="📊 Statistik - Telemetri"
-              data-testid="btn-telemetry"
-            >
-              📊 Statistik
-            </button>
-            <button
-              className="action action--ghost"
-              onClick={handleToggleLang}
-              aria-label={lang === 'id' ? '🇮🇩 ID - Bahasa Indonesia' : '🇬🇧 EN - English'}
-            >
-              {lang === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}
-            </button>
-            <button
-              className="action action--ghost"
-              onClick={handleToggleSound}
-              aria-label={isMuted ? '🔇 Audio Hening' : '🔊 Audio Aktif'}
-            >
-              {isMuted ? '🔇' : '🔊'}
-            </button>
-            <button
-              className="action action--ghost"
-              onClick={() => {
-                sfx.playClick();
-                setPlayMode('hotseat');
-              }}
-              aria-label={i18n.t('nav.hotseat')}
-            >
-              {i18n.t('nav.hotseat')}
-            </button>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="action action--ghost" onClick={() => { sfx.playClick(); setAchievementsTab('achievements'); setShowAchievementsModal(true); }} aria-label="🏆 Pencapaian" data-testid="btn-achievements">🏆</button>
+            <button className="action action--ghost" onClick={() => { sfx.playClick(); setShowTutorialModal(true); }} aria-label="📖 Panduan" data-testid="btn-tutorial">📖</button>
+            <button className="action action--ghost" onClick={() => { sfx.playClick(); setShowTelemetryModal(true); }} aria-label="📊 Statistik" data-testid="btn-telemetry">📊</button>
+            <button className="action action--ghost" onClick={handleToggleLang} aria-label={lang === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}>{lang === 'id' ? '🇮🇩' : '🇬🇧'}</button>
+            <button className="action action--ghost" onClick={handleToggleSound} aria-label={isMuted ? '🔇' : '🔊'}>{isMuted ? '🔇' : '🔊'}</button>
+            <button className="action action--ghost" onClick={() => { sfx.playClick(); setPlayMode('hotseat'); }} aria-label={i18n.t('nav.hotseat')}>{i18n.t('nav.hotseat')}</button>
           </div>
         </div>
 
-        <div className="panel" style={{ maxWidth: 680, margin: '20px auto' }} data-testid="lobby-panel">
+        <div className="panel" style={{ maxWidth: 680, margin: '16px auto' }} data-testid="lobby-panel">
           <h2 className="panel__title">👤 Profil Pemain</h2>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <label htmlFor="player-name-input" className="visually-hidden">
-              Nama Profil Pemain
-            </label>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            <label htmlFor="player-name-input" className="visually-hidden">Nama Profil Pemain</label>
             <input
               id="player-name-input"
               type="text"
               className="action"
-              style={{ flex: 1, textAlign: 'left', background: 'var(--bg-card)' }}
+              style={{ flex: 1, textAlign: 'left', background: 'var(--pixel-dark)' }}
               value={displayName}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Nama Anda"
@@ -227,65 +292,31 @@ export default function App() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-            <button
-              className="action action--primary"
-              onClick={() => {
-                sfx.playClick();
-                setShowSetupModal(true);
-              }}
-              disabled={lobbyLoading}
-              data-testid="lobby-btn-create"
-            >
-              + Buat Match Baru (Pilih Karakter)
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+            <button className="action action--primary" onClick={() => { sfx.playClick(); setShowSetupModal(true); }} disabled={lobbyLoading} data-testid="lobby-btn-create">
+              + Buat Match Baru
             </button>
-            <button
-              className="action"
-              onClick={() => {
-                sfx.playClick();
-                refreshLobbies();
-              }}
-              disabled={lobbyLoading}
-              data-testid="lobby-btn-refresh"
-            >
-              🔄 Segarkan Daftar
+            <button className="action" onClick={() => { sfx.playClick(); refreshLobbies(); }} disabled={lobbyLoading} data-testid="lobby-btn-refresh">
+              🔄 Segarkan
             </button>
           </div>
 
-          {lobbyError && <p style={{ color: 'var(--danger)', marginBottom: 16 }}>{lobbyError}</p>}
+          {lobbyError && <p style={{ color: 'var(--pixel-red)', marginBottom: 12 }}>{lobbyError}</p>}
 
-          <h2 className="panel__title">⚔️ Daftar Match Aktif</h2>
+          <h2 className="panel__title">⚔️ Match Aktif</h2>
           {lobbies.length === 0 ? (
-            <p className="tiny muted">Belum ada match online. Klik tombol di atas untuk membuat match.</p>
+            <p className="tiny muted">Belum ada match online.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {lobbies.map((m) => (
-                <div
-                  key={m.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: 12,
-                    background: 'var(--bg-card)',
-                    borderRadius: 6,
-                  }}
-                >
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: 'var(--pixel-dark)', border: '2px solid var(--pixel-gray)' }}>
                   <div>
-                    <b>Room {m.id}</b> · Status: <span style={{ color: 'var(--beacon)' }}>{m.status}</span>
+                    <b>Room {m.id}</b> · <span style={{ color: 'var(--pixel-beacon)' }}>{m.status}</span>
                     <div className="tiny muted">Pemain: {m.playerIds?.join(', ')}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
                     {m.playerIds?.map((pid) => (
-                      <button
-                        key={pid}
-                        className="action action--ghost"
-                        style={{ padding: '4px 8px', fontSize: 12 }}
-                        onClick={() => {
-                          sfx.playClick();
-                          handleJoinOnlineMatch(m.id, pid);
-                        }}
-                      >
+                      <button key={pid} className="action action--ghost" style={{ padding: '3px 6px', fontSize: 8 }} onClick={() => { sfx.playClick(); handleJoinOnlineMatch(m.id, pid); }}>
                         Join {pid}
                       </button>
                     ))}
@@ -295,56 +326,38 @@ export default function App() {
             </div>
           )}
         </div>
-        
-        {/* Async & Match History Hub (M5/M6) */}
-        <MatchHubPanel
-          playerId={myPlayerId}
-          authToken={authToken}
-          onJoinMatch={handleJoinOnlineMatch}
-          onOpenReplay={(mid) => setReplayMatchId(mid)}
-        />
 
-        <CharacterPickerModal
-          initialSeats={seats}
-          isOpen={showSetupModal}
-          onConfirm={handleStartWithCustomSeats}
-          onCancel={() => setShowSetupModal(false)}
-        />
+        <MatchHubPanel playerId={myPlayerId} authToken={authToken} onJoinMatch={handleJoinOnlineMatch} onOpenReplay={(mid) => setReplayMatchId(mid)} />
 
-        <TutorialModal
-          isOpen={showTutorialModal}
-          onClose={() => setShowTutorialModal(false)}
-        />
-
-        <TelemetryModal
-          isOpen={showTelemetryModal}
-          onClose={() => setShowTelemetryModal(false)}
-        />
-
-        <ReplayModal
-          matchId={replayMatchId || ''}
-          isOpen={!!replayMatchId}
-          onClose={() => setReplayMatchId(null)}
-        />
+        <CharacterPickerModal initialSeats={seats} isOpen={showSetupModal} onConfirm={handleStartWithCustomSeats} onCancel={() => setShowSetupModal(false)} />
+        <AchievementsModal isOpen={showAchievementsModal} onClose={() => setShowAchievementsModal(false)} defaultTab={achievementsTab} />
+        <TutorialModal isOpen={showTutorialModal} onClose={() => setShowTutorialModal(false)} />
+        <TelemetryModal isOpen={showTelemetryModal} onClose={() => setShowTelemetryModal(false)} />
+        <ReplayModal matchId={replayMatchId || ''} isOpen={!!replayMatchId} onClose={() => setReplayMatchId(null)} />
+        <AchievementToast />
       </div>
     );
   }
 
+  // ========================================
   // Loading Screen
+  // ========================================
   if (game.phase === 'loading') {
     return (
       <div className="overlay">
         <div className="overlay__card">
           <h2 className="overlay__title">Menyalakan mercusuar…</h2>
           <p className="overlay__text">
-            {playMode === 'online' ? 'Menghubungkan ke server WebSocket...' : 'Memuat rules engine WASM...'}
+            {playMode === 'online' ? 'Menghubungkan ke server...' : 'Memuat rules engine WASM...'}
           </p>
         </div>
       </div>
     );
   }
 
+  // ========================================
   // Error Screen
+  // ========================================
   if (game.phase === 'error' || !game.view) {
     return (
       <div className="overlay">
@@ -352,217 +365,138 @@ export default function App() {
           <h2 className="overlay__title">Gagal memuat</h2>
           <p className="overlay__text">{game.error ?? 'Alasan tidak diketahui.'}</p>
           {playMode === 'online' ? (
-            <button className="action action--primary" onClick={() => setOnlineMatchId(null)}>
-              {i18n.t('nav.back_to_lobby')}
-            </button>
+            <button className="action action--primary" onClick={() => setOnlineMatchId(null)}>{i18n.t('nav.back_to_lobby')}</button>
           ) : (
-            <button className="action" onClick={() => game.restart(seed)}>
-              Coba lagi
-            </button>
+            <button className="action" onClick={() => game.restart(seed)}>Coba lagi</button>
           )}
         </div>
       </div>
     );
   }
 
-  const st = game.view.state;
-  const activeId = st.status === 'active' ? (st.turnOrder[st.activeIdx] ?? null) : null;
-  const activePlayer = st.players.find((p) => p.id === activeId) ?? null;
-  const over = st.status === 'won' || st.status === 'lost';
-
-  const send = (cmd: Command) => game.send(cmd);
+  // ========================================
+  // MAIN GAMEPLAY — Fullscreen Map + Floating HUD
+  // ========================================
+  const activePlayer = st!.players.find((p) => p.id === activeId) ?? null;
+  const isGameOver = over ?? false;
 
   return (
     <div className="app">
       <h1 className="visually-hidden">The Last Lighthouse — Menyalakan Mercusuar Terakhir</h1>
 
-      {/* Top Darkness Track Bar */}
-      <DarknessTrack state={st} max={DARKNESS_MAX} />
+      {/* Fullscreen Pixel-Art Canvas Map */}
+      {useCanvasMap ? (
+        <IslandMapCanvas
+          state={st!}
+          legal={game.legal}
+          activePlayer={activeId}
+          onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
+          onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
+        />
+      ) : (
+        <IslandMap
+          state={st!}
+          legal={game.legal}
+          activePlayer={activeId}
+          onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
+          onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
+        />
+      )}
 
-      {/* Main Header / Banner */}
-      <header className="panel banner" role="banner" data-testid="game-header">
-        <span className="banner__turn" data-testid="turn-status">
-          {over ? (
-            <b>{st.status === 'won' ? i18n.t('status.won') : i18n.t('status.lost')}</b>
-          ) : (
+      {/* Floating HUD Overlay */}
+      <FloatingHUD
+        state={st!}
+        activePlayer={activeId}
+        darknessMax={DARKNESS_MAX}
+        isMuted={isMuted}
+        lang={lang}
+        gameOver={isGameOver}
+        legal={game.legal}
+        onToggleSound={handleToggleSound}
+        onToggleLang={handleToggleLang}
+        onOpenTutorial={() => setShowTutorialModal(true)}
+        onOpenTelemetry={() => setShowTelemetryModal(true)}
+        onOpenAchievements={() => { sfx.playClick(); setAchievementsTab('achievements'); setShowAchievementsModal(true); }}
+        onOpenSettings={() => setShowSettingsModal(true)}
+        onOpenActions={() => setShowActionsModal(true)}
+        onOpenLighthouse={() => setShowLighthouseModal(true)}
+        onOpenLog={() => setShowLogModal(true)}
+        onOpenCards={() => setShowCardsModal(true)}
+        onOpenPlayers={() => setShowPlayersModal(true)}
+        onNewGame={() => { sfx.playClick(); game.restart(); }}
+        onSwitchOnline={() => { sfx.playClick(); setPlayMode('online'); setOnlineMatchId(null); }}
+      />
+
+      {/* ===== PIXEL MODALS (opened from floating HUD buttons) ===== */}
+
+      {/* Actions Modal */}
+      <PixelModal isOpen={showActionsModal} onClose={() => setShowActionsModal(false)} title={`⚡ Aksi — ${activePlayer?.name ?? ''}`}>
+        {!isGameOver && (
+          <ActionBar
+            state={st!}
+            legal={game.legal}
+            disabled={game.busy}
+            onSend={(cmd) => { send(cmd); setShowActionsModal(false); }}
+            onFight={() => { setShowActionsModal(false); setShowCombatModal(true); }}
+          />
+        )}
+      </PixelModal>
+
+      {/* Players Modal */}
+      <PixelModal isOpen={showPlayersModal} onClose={() => setShowPlayersModal(false)} title="👤 Pemain" wide>
+        <PlayerPanel view={game.view} maxHealth={MAX_HEALTH} maxAP={MAX_AP} inventoryCapacity={INVENTORY_CAPACITY} />
+      </PixelModal>
+
+      {/* Lighthouse Modal */}
+      <PixelModal isOpen={showLighthouseModal} onClose={() => setShowLighthouseModal(false)} title="🏰 Mercusuar">
+        <LighthousePanel state={st!} />
+      </PixelModal>
+
+      {/* Event Log Modal */}
+      <PixelModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} title="📜 Catatan" wide>
+        <EventLog log={game.log} state={st!} />
+      </PixelModal>
+
+      {/* Card Decks Modal */}
+      <PixelModal isOpen={showCardsModal} onClose={() => setShowCardsModal(false)} title="🎴 Kartu" wide>
+        <CardDeckPanel state={st!} />
+      </PixelModal>
+
+      {/* Settings Modal */}
+      <PixelModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} title="⚙️ Pengaturan">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button className="action" onClick={() => { setUseCanvasMap((v) => !v); sfx.playClick(); }}>
+            {useCanvasMap ? '🎨 Peta: WebGL Canvas' : '📐 Peta: SVG Vektor'}
+          </button>
+          <button className="action" onClick={() => { sfx.playClick(); setShowSettingsModal(false); setShowSetupModal(true); }}>
+            ⚙️ Pilih Karakter
+          </button>
+          {playMode === 'hotseat' && (
             <>
-              {playMode === 'online' ? (
-                <span>
-                  Room <b>{onlineMatchId}</b> ({i18n.t('nav.online')}) ·{' '}
-                </span>
-              ) : null}
-              {i18n.t('status.turn_of')} <b>{activePlayer?.name}</b> · {activePlayer?.ap ?? 0} {i18n.t('status.ap_left')}
+              <button className="action" onClick={() => { sfx.playClick(); setPlayMode('online'); setOnlineMatchId(null); setShowSettingsModal(false); }}>
+                🌐 {i18n.t('nav.online')}
+              </button>
+              <button className="action action--primary" onClick={() => { sfx.playClick(); game.restart(); setShowSettingsModal(false); }}>
+                🔄 {i18n.t('nav.new_game')}
+              </button>
             </>
           )}
-        </span>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            className="action action--ghost"
-            onClick={() => {
-              sfx.playClick();
-              setShowTutorialModal(true);
-            }}
-            title="Panduan Cara Bermain"
-            aria-label="📖 Panduan - Cara Bermain"
-            data-testid="btn-tutorial-gameplay"
-          >
-            📖 Panduan
-          </button>
-          <button
-            className="action action--ghost"
-            onClick={() => {
-              sfx.playClick();
-              setShowTelemetryModal(true);
-            }}
-            title="Statistik Global"
-            aria-label="📊 Statistik - Telemetri"
-            data-testid="btn-telemetry-gameplay"
-          >
-            📊 Statistik
-          </button>
-          {/* Controls: Audio, Language, Canvas Mode */}
-          <button
-            className="action action--ghost"
-            onClick={handleToggleLang}
-            title="Ganti Bahasa"
-            aria-label={lang === 'id' ? '🇮🇩 ID - Bahasa Indonesia' : '🇬🇧 EN - English'}
-            data-testid="btn-toggle-lang"
-          >
-            {lang === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}
-          </button>
-          <button
-            className="action action--ghost"
-            onClick={handleToggleSound}
-            title="Toggle Audio"
-            aria-label={isMuted ? '🔇 Audio Hening' : '🔊 Audio Aktif'}
-            data-testid="btn-toggle-sound"
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </button>
-          <button
-            className="action action--ghost"
-            onClick={() => {
-              sfx.playClick();
-              setUseCanvasMap((v) => !v);
-            }}
-            title="Toggle PixiJS Canvas / SVG Map"
-            aria-label={useCanvasMap ? '🎨 WebGL - Peta Canvas' : '📐 SVG - Peta Vektor'}
-            data-testid="btn-toggle-map"
-          >
-            {useCanvasMap ? '🎨 WebGL' : '📐 SVG'}
-          </button>
-
-          {playMode === 'online' ? (
-            <button
-              className="action action--ghost"
-              onClick={() => {
-                sfx.playClick();
-                setOnlineMatchId(null);
-              }}
-              aria-label={i18n.t('nav.back_to_lobby')}
-              data-testid="btn-back-lobby"
-            >
-              {i18n.t('nav.back_to_lobby')}
+          {playMode === 'online' && (
+            <button className="action" onClick={() => { sfx.playClick(); setOnlineMatchId(null); setShowSettingsModal(false); }}>
+              ← {i18n.t('nav.back_to_lobby')}
             </button>
-          ) : (
-            <>
-              <button
-                className="action action--ghost"
-                onClick={() => {
-                  sfx.playClick();
-                  setShowSetupModal(true);
-                }}
-                aria-label="⚙️ Karakter - Pengaturan"
-                data-testid="btn-setup-character"
-              >
-                ⚙️ Karakter
-              </button>
-              <button
-                className="action action--ghost"
-                onClick={() => {
-                  sfx.playClick();
-                  setPlayMode('online');
-                  setOnlineMatchId(null);
-                }}
-                aria-label={i18n.t('nav.online')}
-                data-testid="btn-switch-online"
-              >
-                {i18n.t('nav.online')}
-              </button>
-              <button
-                className="action action--ghost"
-                onClick={() => {
-                  sfx.playClick();
-                  game.restart();
-                }}
-                aria-label={i18n.t('nav.new_game')}
-                data-testid="btn-new-game"
-              >
-                {i18n.t('nav.new_game')}
-              </button>
-            </>
           )}
         </div>
-      </header>
+      </PixelModal>
 
-      <main style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)' }} data-testid="game-main">
-        {/* Center 2D Island Map (PixiJS Canvas or SVG fallback) */}
-        {useCanvasMap ? (
-          <IslandMapCanvas
-            state={st}
-            legal={game.legal}
-            activePlayer={activeId}
-            onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
-            onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
-          />
-        ) : (
-          <IslandMap
-            state={st}
-            legal={game.legal}
-            activePlayer={activeId}
-            onMove={(to) => activeId && send({ kind: 'move', player: activeId, to })}
-            onExplore={(to) => activeId && send({ kind: 'explore', player: activeId, to })}
-          />
-        )}
-
-        {/* Action Bar */}
-        {!over && (
-          <div className="panel">
-            <h2 className="panel__title">⚡ {i18n.t('status.turn_of')} {activePlayer?.name} — Aksi</h2>
-            <ActionBar
-              state={st}
-              legal={game.legal}
-              disabled={game.busy}
-              onSend={send}
-              onFight={() => setShowCombatModal(true)}
-            />
-          </div>
-        )}
-
-        {/* Card Decks Section (GDD §8.3) */}
-        <CardDeckPanel state={st} />
-
-        {/* Player Inventory & Lighthouse Panels */}
-        <div className="app__lower">
-          <PlayerPanel
-            view={game.view}
-            maxHealth={MAX_HEALTH}
-            maxAP={MAX_AP}
-            inventoryCapacity={INVENTORY_CAPACITY}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)', minHeight: 0 }}>
-            <LighthousePanel state={st} />
-            <EventLog log={game.log} state={st} />
-          </div>
-        </div>
-      </main>
+      {/* ===== EXISTING GAME MODALS (unchanged logic) ===== */}
 
       {/* Mystery Dilemma Dialog */}
-      {st.pending && !over && !game.awaitingHandoff && (
+      {st!.pending && !isGameOver && !game.awaitingHandoff && (
         <MysteryDialog
-          pending={st.pending}
+          pending={st!.pending}
           viewer={game.view.viewer}
-          playerName={st.players.find((p) => p.id === st.pending?.player)?.name ?? ''}
+          playerName={st!.players.find((p) => p.id === st!.pending?.player)?.name ?? ''}
           legal={game.legal}
           disabled={game.busy}
           onSend={send}
@@ -589,22 +523,16 @@ export default function App() {
       />
 
       {/* Pass-and-Play Device Handoff Screen */}
-      {game.awaitingHandoff && !over && (
+      {game.awaitingHandoff && !isGameOver && (
         <div className="overlay">
           <div className="overlay__card">
             <h2 className="overlay__title">{i18n.t('handoff.title')}</h2>
             <p className="overlay__text">
-              {i18n.t('handoff.prompt')} <b>{st.players.find((p) => p.id === game.handoffTo)?.name}</b>.
+              {i18n.t('handoff.prompt')} <b>{st!.players.find((p) => p.id === game.handoffTo)?.name}</b>.
               <br />
               <span className="tiny">{i18n.t('handoff.subtext')}</span>
             </p>
-            <button
-              className="action action--primary"
-              onClick={() => {
-                sfx.playClick();
-                game.confirmHandoff();
-              }}
-            >
+            <button className="action action--primary" onClick={() => { sfx.playClick(); game.confirmHandoff(); }}>
               {i18n.t('handoff.confirm')}
             </button>
           </div>
@@ -612,55 +540,54 @@ export default function App() {
       )}
 
       {/* Game Over Screen */}
-      {over && (
+      {isGameOver && (
         <div className="overlay">
           <div className="overlay__card">
             <h2 className="overlay__title">
-              {st.status === 'won' ? i18n.t('status.won') : i18n.t('status.lost')}
+              {st!.status === 'won' ? i18n.t('status.won') : i18n.t('status.lost')}
             </h2>
             <p className="overlay__text">
-              {st.status === 'won'
-                ? 'Kelima komponen mercusuar telah menyala sempurna. Skor akhir dihitung:'
-                : `Darkness mencapai ${DARKNESS_MAX} di ronde ${st.round}. Tidak ada pemenang.`}
+              {st!.status === 'won'
+                ? 'Kelima komponen mercusuar telah menyala sempurna!'
+                : `Darkness mencapai ${DARKNESS_MAX} di ronde ${st!.round}.`}
             </p>
 
-            {st.status === 'won' && (
-              <div style={{ textAlign: 'left', marginBottom: 16 }}>
-                {[...st.players]
+            {st!.status === 'won' && (
+              <div style={{ textAlign: 'left', marginBottom: 14 }}>
+                {[...st!.players]
                   .sort((a, b) => b.vp - a.vp)
                   .map((p, i) => (
-                    <div key={p.id} className="seat__head" style={{ padding: '4px 0' }}>
-                      <span>
-                        {i === 0 ? '👑 ' : ''}
-                        {p.name} ({p.character})
-                      </span>
-                      <b style={{ color: 'var(--beacon)' }}>{p.vp} VP</b>
+                    <div key={p.id} className="seat__head" style={{ padding: '3px 0' }}>
+                      <span>{i === 0 ? '👑 ' : ''}{p.name} ({p.character})</span>
+                      <b style={{ color: 'var(--pixel-beacon)' }}>{p.vp} VP</b>
                     </div>
                   ))}
               </div>
             )}
 
-            {playMode === 'online' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
-                className="action action--primary"
+                className="action action--ghost"
+                style={{ width: '100%' }}
                 onClick={() => {
                   sfx.playClick();
-                  setOnlineMatchId(null);
+                  setAchievementsTab('leaderboard');
+                  setShowAchievementsModal(true);
                 }}
               >
-                {i18n.t('nav.back_to_lobby')}
+                🏆 {i18n.t('ach.tab_leaderboard')} & {i18n.t('ach.tab_achievements')}
               </button>
-            ) : (
-              <button
-                className="action action--primary"
-                onClick={() => {
-                  sfx.playClick();
-                  game.restart();
-                }}
-              >
-                Main Lagi
-              </button>
-            )}
+
+              {playMode === 'online' ? (
+                <button className="action action--primary" onClick={() => { sfx.playClick(); setOnlineMatchId(null); }}>
+                  {i18n.t('nav.back_to_lobby')}
+                </button>
+              ) : (
+                <button className="action action--primary" onClick={() => { sfx.playClick(); game.restart(); }}>
+                  Main Lagi
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -672,22 +599,12 @@ export default function App() {
         </div>
       )}
 
-      {/* M6 Modals */}
-      <TutorialModal
-        isOpen={showTutorialModal}
-        onClose={() => setShowTutorialModal(false)}
-      />
-
-      <TelemetryModal
-        isOpen={showTelemetryModal}
-        onClose={() => setShowTelemetryModal(false)}
-      />
-
-      <ReplayModal
-        matchId={replayMatchId || ''}
-        isOpen={!!replayMatchId}
-        onClose={() => setReplayMatchId(null)}
-      />
+      {/* Existing Modals */}
+      <AchievementsModal isOpen={showAchievementsModal} onClose={() => setShowAchievementsModal(false)} defaultTab={achievementsTab} />
+      <TutorialModal isOpen={showTutorialModal} onClose={() => setShowTutorialModal(false)} />
+      <TelemetryModal isOpen={showTelemetryModal} onClose={() => setShowTelemetryModal(false)} />
+      <ReplayModal matchId={replayMatchId || ''} isOpen={!!replayMatchId} onClose={() => setReplayMatchId(null)} />
+      <AchievementToast />
     </div>
   );
 }

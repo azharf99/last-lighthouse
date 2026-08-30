@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -406,7 +407,107 @@ func (p *PostgresStore) GetPushSubscriptions(ctx context.Context, playerID strin
 	return out, nil
 }
 
+// Leaderboard & Pencapaian Skor
+
+func (p *PostgresStore) AddLeaderboardEntry(ctx context.Context, entry LeaderboardEntry) error {
+	if entry.ID == "" {
+		entry.ID = "lb_" + uuid.New().String()[:8]
+	}
+	createdAt := entry.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now()
+	}
+
+	query := `
+		INSERT INTO leaderboard (id, player_name, character, vp, darkness, rounds, won, monsters_slain, components_contributed, match_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`
+	_, err := p.pool.Exec(ctx, query,
+		entry.ID,
+		entry.PlayerName,
+		entry.Character,
+		entry.VP,
+		entry.Darkness,
+		entry.Rounds,
+		entry.Won,
+		entry.MonstersSlain,
+		entry.ComponentsContributed,
+		entry.MatchID,
+		createdAt,
+	)
+	if err != nil {
+		return fmt.Errorf("add leaderboard entry: %w", err)
+	}
+	return nil
+}
+
+func (p *PostgresStore) GetLeaderboard(ctx context.Context, category string, limit int) ([]LeaderboardEntry, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	var query string
+	switch category {
+	case "speed", "rounds":
+		query = `
+			SELECT id, player_name, character, vp, darkness, rounds, won, monsters_slain, components_contributed, match_id, created_at
+			FROM leaderboard
+			WHERE won = true
+			ORDER BY rounds ASC, vp DESC, darkness ASC
+			LIMIT $1
+		`
+	case "monsters":
+		query = `
+			SELECT id, player_name, character, vp, darkness, rounds, won, monsters_slain, components_contributed, match_id, created_at
+			FROM leaderboard
+			ORDER BY monsters_slain DESC, vp DESC
+			LIMIT $1
+		`
+	case "vp":
+		fallthrough
+	default:
+		query = `
+			SELECT id, player_name, character, vp, darkness, rounds, won, monsters_slain, components_contributed, match_id, created_at
+			FROM leaderboard
+			ORDER BY vp DESC, won DESC, rounds ASC
+			LIMIT $1
+		`
+	}
+
+	rows, err := p.pool.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get leaderboard: %w", err)
+	}
+	defer rows.Close()
+
+	var out []LeaderboardEntry
+	for rows.Next() {
+		var e LeaderboardEntry
+		if err := rows.Scan(
+			&e.ID,
+			&e.PlayerName,
+			&e.Character,
+			&e.VP,
+			&e.Darkness,
+			&e.Rounds,
+			&e.Won,
+			&e.MonstersSlain,
+			&e.ComponentsContributed,
+			&e.MatchID,
+			&e.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan leaderboard entry: %w", err)
+		}
+		out = append(out, e)
+	}
+	if out == nil {
+		out = []LeaderboardEntry{}
+	}
+	return out, nil
+}
+
 func (p *PostgresStore) Close() error {
 	p.pool.Close()
 	return nil
 }
+

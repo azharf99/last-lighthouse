@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,6 +82,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/push/subscribe", s.handlePushSubscribe)
 	s.mux.HandleFunc("POST /api/telemetry/report", s.handleReportTelemetry)
 	s.mux.HandleFunc("GET /api/telemetry/stats", s.handleGetTelemetryStats)
+	s.mux.HandleFunc("GET /api/leaderboard", s.handleGetLeaderboard)
+	s.mux.HandleFunc("POST /api/leaderboard", s.handleSubmitLeaderboard)
 	s.mux.Handle("/ws", s.hub)
 }
 
@@ -381,6 +384,61 @@ func (s *Server) handleReportTelemetry(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetTelemetryStats(w http.ResponseWriter, r *http.Request) {
 	stats := s.telemetry.GetStats(r.Context())
 	writeJSON(w, http.StatusOK, stats)
+}
+
+// Leaderboard Handlers
+
+func (s *Server) handleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	category := r.URL.Query().Get("category")
+	limitStr := r.URL.Query().Get("limit")
+	limit := 20
+	if limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+			limit = val
+		}
+	}
+
+	list, err := s.store.GetLeaderboard(r.Context(), category, limit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get leaderboard"}`, http.StatusInternalServerError)
+		return
+	}
+	if list == nil {
+		list = []store.LeaderboardEntry{}
+	}
+	writeJSON(w, http.StatusOK, list)
+}
+
+func (s *Server) handleSubmitLeaderboard(w http.ResponseWriter, r *http.Request) {
+	var entry store.LeaderboardEntry
+	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+		http.Error(w, `{"error":"invalid leaderboard entry payload"}`, http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(entry.PlayerName) == "" {
+		entry.PlayerName = "Pemain Misterius"
+	}
+	if entry.Character == "" {
+		entry.Character = "navigator"
+	}
+	if entry.ID == "" {
+		entry.ID = "lb_" + uuid.New().String()[:8]
+	}
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now()
+	}
+
+	if err := s.store.AddLeaderboardEntry(r.Context(), entry); err != nil {
+		http.Error(w, `{"error":"failed to save leaderboard entry"}`, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"status": "ok",
+		"id":     entry.ID,
+		"entry":  entry,
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

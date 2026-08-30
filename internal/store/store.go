@@ -63,8 +63,23 @@ type PushSubscription struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// LeaderboardEntry menyimpan skor dan performa seorang pemain dalam satu pertandingan.
+type LeaderboardEntry struct {
+	ID                    string    `json:"id"`
+	PlayerName            string    `json:"playerName"`
+	Character             string    `json:"character"`
+	VP                    int       `json:"vp"`
+	Darkness              int       `json:"darkness"`
+	Rounds                int       `json:"rounds"`
+	Won                   bool      `json:"won"`
+	MonstersSlain         int       `json:"monstersSlain"`
+	ComponentsContributed int       `json:"componentsContributed"`
+	MatchID               string    `json:"matchId"`
+	CreatedAt             time.Time `json:"createdAt"`
+}
+
 // Store adalah antarmuka penyimpanan persisten untuk server Last Lighthouse (ADR-004, ADR-007).
-// Menangani metadata match, event log append-only, snapshot, identitas user, turn deadlines, dan push subscriptions.
+// Menangani metadata match, event log append-only, snapshot, identitas user, turn deadlines, push subscriptions, dan leaderboard.
 type Store interface {
 	// Match metadata
 	CreateMatch(ctx context.Context, m MatchRecord) error
@@ -96,5 +111,10 @@ type Store interface {
 	SavePushSubscription(ctx context.Context, sub PushSubscription) error
 	GetPushSubscriptions(ctx context.Context, playerID string) ([]PushSubscription, error)
 
+	// Leaderboard & Pencapaian Skor
+	AddLeaderboardEntry(ctx context.Context, entry LeaderboardEntry) error
+	GetLeaderboard(ctx context.Context, category string, limit int) ([]LeaderboardEntry, error)
+
 	Close() error
 }
+

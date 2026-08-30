@@ -1,5 +1,4 @@
-import { Container, Graphics, Text, TextStyle, Ticker } from 'pixi.js';
-import { RESOURCE_GLYPH } from '../labels';
+import { Container, Graphics, Ticker } from 'pixi.js';
 
 interface ActiveTween {
   update(deltaMs: number): boolean; // returns true when finished
@@ -12,9 +11,9 @@ function ensureTicker() {
   if (!globalTickerStarted) {
     globalTickerStarted = true;
     Ticker.shared.add((ticker) => {
-      const deltaMs = ticker.deltaMS;
+      const dt = ticker.deltaMS;
       for (const tween of activeTweens) {
-        if (tween.update(deltaMs)) {
+        if (tween.update(dt)) {
           activeTweens.delete(tween);
         }
       }
@@ -24,14 +23,13 @@ function ensureTicker() {
 
 export const AnimationEngine = {
   /**
-   * Smoothly animates a character standee walking from startPos to endPos
-   * with a natural hopping arc and footstep sway.
+   * Retro pixel-hop walk: 3 discrete hops from A to B.
    */
   animateWalk(
     standee: Container,
     from: { x: number; y: number },
     to: { x: number; y: number },
-    durationMs: number = 650,
+    durationMs: number = 500,
     onComplete?: () => void,
   ) {
     ensureTicker();
@@ -42,29 +40,23 @@ export const AnimationEngine = {
         elapsed += deltaMs;
         const progress = Math.min(1, elapsed / durationMs);
 
-        // Smooth cubic ease-in-out
-        const t =
-          progress < 0.5
-            ? 4 * progress * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        // 3 discrete hops — snap between positions
+        const steps = 3;
+        const step = Math.min(steps, Math.floor(progress * (steps + 1)));
+        const stepT = step / steps;
 
-        // Base linear transit
-        const curX = from.x + (to.x - from.x) * t;
-        const curY = from.y + (to.y - from.y) * t;
+        standee.x = from.x + (to.x - from.x) * stepT;
+        standee.y = from.y + (to.y - from.y) * stepT;
 
-        // 3 Hopping arc bounces during the journey
-        const hopOffset = -Math.abs(Math.sin(progress * Math.PI * 3)) * 14;
-
-        standee.x = curX;
-        standee.y = curY + hopOffset;
-
-        // Footstep sway / tilt
-        standee.rotation = Math.sin(progress * Math.PI * 6) * 0.12;
+        // Pixel jump arc per hop
+        const hopFrac = (progress * steps) % 1;
+        if (progress < 1 && hopFrac < 0.5) {
+          standee.y -= 10; // bounce up
+        }
 
         if (progress >= 1) {
           standee.x = to.x;
           standee.y = to.y;
-          standee.rotation = 0;
           if (onComplete) onComplete();
           return true;
         }
@@ -76,13 +68,13 @@ export const AnimationEngine = {
   },
 
   /**
-   * Spawns a shimmering floating resource harvest burst when items are gathered.
+   * Pixelated sparkle burst when gathering resources.
    */
   animateGatherBurst(
     world: Container,
     origin: { x: number; y: number },
     resource: string,
-    amount: number = 1,
+    _amount: number = 1,
   ) {
     ensureTicker();
     const burstContainer = new Container();
@@ -90,45 +82,34 @@ export const AnimationEngine = {
     burstContainer.y = origin.y;
     world.addChild(burstContainer);
 
-    // Floating Glyph & Amount Text
-    const glyph = RESOURCE_GLYPH[resource] || '📦';
-    const text = new Text({
-      text: `+${amount} ${glyph}`,
-      style: new TextStyle({
-        fontSize: 16,
-        fontWeight: 'bold',
-        fill: 0xffdb9c,
-        fontFamily: 'Segoe UI, sans-serif',
-        dropShadow: {
-          alpha: 0.9,
-          blur: 4,
-          color: 0x070d16,
-          distance: 1,
-        },
-      }),
-    });
-    text.anchor.set(0.5);
-    burstContainer.addChild(text);
+    // Spawn pixel sparkle particles
+    const colors: Record<string, number> = {
+      wood: 0xb86f50,
+      metal: 0x8b9bb4,
+      crystal: 0x7ad7e8,
+      food: 0x38b764,
+    };
+    const color = colors[resource] ?? 0xf7e26b;
 
-    // Sparkle sparkles around text
-    const sparkles = new Graphics();
-    sparkles.circle(-18, -4, 2.5).fill({ color: 0xffffff });
-    sparkles.circle(18, -6, 2).fill({ color: 0xffc76b });
-    sparkles.circle(0, -18, 3).fill({ color: 0x7ad7e8 });
-    burstContainer.addChild(sparkles);
+    for (let i = 0; i < 6; i++) {
+      const spark = new Graphics();
+      spark.rect(0, 0, 4, 4).fill({ color });
+      spark.x = (Math.random() - 0.5) * 24;
+      spark.y = (Math.random() - 0.5) * 16;
+      burstContainer.addChild(spark);
+    }
 
     let elapsed = 0;
-    const duration = 900;
+    const duration = 600;
 
     const tween: ActiveTween = {
       update(deltaMs: number) {
         elapsed += deltaMs;
         const progress = Math.min(1, elapsed / duration);
 
-        // Float upward with decelerating velocity
-        burstContainer.y = origin.y - Math.sin(progress * (Math.PI / 2)) * 48;
-        burstContainer.alpha = 1 - progress * progress; // Fade out near top
-        burstContainer.scale.set(1 + progress * 0.2);
+        // Float upward in discrete pixel steps
+        burstContainer.y = origin.y - Math.floor(progress * 40);
+        burstContainer.alpha = 1 - progress;
 
         if (progress >= 1) {
           world.removeChild(burstContainer);
@@ -143,28 +124,33 @@ export const AnimationEngine = {
   },
 
   /**
-   * Animates a fierce combat clash (attacker lunges, slash arc FX flashes, monster shakes).
+   * Retro combat clash: screen flash + pixel X slash.
    */
   animateCombatClash(
     world: Container,
-    attacker: Container,
+    _attackerPos: { x: number; y: number },
     monsterPos: { x: number; y: number },
     onHit?: () => void,
     onComplete?: () => void,
   ) {
     ensureTicker();
-    const origX = attacker.x;
-    const origY = attacker.y;
 
-    // Slash FX Graphics
-    const slashGfx = new Graphics();
-    slashGfx.x = monsterPos.x;
-    slashGfx.y = monsterPos.y;
-    slashGfx.alpha = 0;
-    world.addChild(slashGfx);
+    // White flash overlay
+    const flash = new Graphics();
+    flash.rect(-1000, -1000, 3000, 3000).fill({ color: 0xf4f4f4 });
+    flash.alpha = 0.6;
+    world.addChild(flash);
+
+    // Pixel slash X
+    const slash = new Graphics();
+    slash.moveTo(-12, -12).lineTo(12, 12).stroke({ width: 4, color: 0xff1e56 });
+    slash.moveTo(12, -12).lineTo(-12, 12).stroke({ width: 4, color: 0xff1e56 });
+    slash.x = monsterPos.x;
+    slash.y = monsterPos.y;
+    world.addChild(slash);
 
     let elapsed = 0;
-    const duration = 600;
+    const duration = 350;
     let hitTriggered = false;
 
     const tween: ActiveTween = {
@@ -172,48 +158,20 @@ export const AnimationEngine = {
         elapsed += deltaMs;
         const progress = Math.min(1, elapsed / duration);
 
-        // Phase 1: Lunge forward (0 to 0.4)
-        if (progress < 0.4) {
-          const lungeT = progress / 0.4;
-          attacker.x = origX + (monsterPos.x - origX) * 0.45 * lungeT;
-          attacker.y = origY + (monsterPos.y - origY) * 0.45 * lungeT;
-          attacker.rotation = 0.2;
+        // Trigger hit at midpoint
+        if (!hitTriggered && progress >= 0.3) {
+          hitTriggered = true;
+          if (onHit) onHit();
         }
-        // Phase 2: Slash Impact & Screen Flash (0.4 to 0.7)
-        else if (progress < 0.7) {
-          if (!hitTriggered) {
-            hitTriggered = true;
-            if (onHit) onHit();
-          }
 
-          const slashT = (progress - 0.4) / 0.3;
-          slashGfx.clear();
-          slashGfx.alpha = 1 - slashT;
-
-          // Arc slash line across monster
-          slashGfx
-            .moveTo(-28, -28)
-            .lineTo(28, 20)
-            .stroke({ width: 4.5, color: 0xffffff });
-          slashGfx
-            .moveTo(-20, -32)
-            .lineTo(24, 14)
-            .stroke({ width: 2, color: 0xffc76b });
-        }
-        // Phase 3: Return to original position (0.7 to 1.0)
-        else {
-          const returnT = (progress - 0.7) / 0.3;
-          attacker.x = origX + (monsterPos.x - origX) * 0.45 * (1 - returnT);
-          attacker.y = origY + (monsterPos.y - origY) * 0.45 * (1 - returnT);
-          attacker.rotation = 0.2 * (1 - returnT);
-        }
+        flash.alpha = 0.6 * (1 - progress);
+        slash.alpha = 1 - progress;
 
         if (progress >= 1) {
-          attacker.x = origX;
-          attacker.y = origY;
-          attacker.rotation = 0;
-          world.removeChild(slashGfx);
-          slashGfx.destroy();
+          world.removeChild(flash);
+          world.removeChild(slash);
+          flash.destroy();
+          slash.destroy();
           if (onComplete) onComplete();
           return true;
         }

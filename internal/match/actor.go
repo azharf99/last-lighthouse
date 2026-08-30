@@ -327,13 +327,31 @@ func (a *Actor) handleCommand(pid core.PlayerID, clientSeq int64, cmd core.Comma
 
 	if a.state.Over() {
 		status := "lost"
+		won := false
 		if a.state.Status == core.StatusWon {
 			status = "won"
+			won = true
 		}
 		_ = a.store.UpdateMatchStatus(context.Background(), a.id, status)
 		if a.turnTimer != nil {
 			a.turnTimer.Stop()
 			a.turnTimer = nil
+		}
+
+		// Otomatis catat entri leaderboard untuk semua pemain dalam match ini
+		for _, p := range a.state.Players {
+			_ = a.store.AddLeaderboardEntry(context.Background(), store.LeaderboardEntry{
+				PlayerName:            p.Name,
+				Character:             string(p.Character),
+				VP:                    p.VP,
+				Darkness:              a.state.Darkness,
+				Rounds:                a.state.Round,
+				Won:                   won,
+				MonstersSlain:         p.MonstersSlain,
+				ComponentsContributed: p.RepairsJoined,
+				MatchID:               a.id,
+				CreatedAt:             time.Now(),
+			})
 		}
 	} else {
 		// Player made a valid manual action -> reset missed turns counter

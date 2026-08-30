@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 )
@@ -15,10 +16,11 @@ type MemoryStore struct {
 	tokens        map[string]string // token -> userID
 	deadlines     map[string]TurnDeadline
 	subscriptions map[string][]PushSubscription // playerID -> subscriptions
+	leaderboard   []LeaderboardEntry
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
+	ms := &MemoryStore{
 		matches:       make(map[string]MatchRecord),
 		events:        make(map[string][]EventRecord),
 		snapshots:     make(map[string][]SnapshotRecord),
@@ -26,7 +28,82 @@ func NewMemoryStore() *MemoryStore {
 		tokens:        make(map[string]string),
 		deadlines:     make(map[string]TurnDeadline),
 		subscriptions: make(map[string][]PushSubscription),
+		leaderboard:   make([]LeaderboardEntry, 0),
 	}
+	ms.seedBaselineLeaderboard()
+	return ms
+}
+
+func (m *MemoryStore) seedBaselineLeaderboard() {
+	now := time.Now()
+	sample := []LeaderboardEntry{
+		{
+			ID:                    "lb_001",
+			PlayerName:            "Kapten Ana",
+			Character:             "navigator",
+			VP:                    24,
+			Darkness:              4,
+			Rounds:                6,
+			Won:                   true,
+			MonstersSlain:         2,
+			ComponentsContributed: 3,
+			MatchID:               "m_solo_pro",
+			CreatedAt:             now.Add(-3 * 24 * time.Hour),
+		},
+		{
+			ID:                    "lb_002",
+			PlayerName:            "Mekanik Budi",
+			Character:             "engineer",
+			VP:                    22,
+			Darkness:              5,
+			Rounds:                7,
+			Won:                   true,
+			MonstersSlain:         1,
+			ComponentsContributed: 4,
+			MatchID:               "m_coop_duo",
+			CreatedAt:             now.Add(-2 * 24 * time.Hour),
+		},
+		{
+			ID:                    "lb_003",
+			PlayerName:            "Ranger Citra",
+			Character:             "hunter",
+			VP:                    19,
+			Darkness:              6,
+			Rounds:                8,
+			Won:                   true,
+			MonstersSlain:         5,
+			ComponentsContributed: 2,
+			MatchID:               "m_hunt_01",
+			CreatedAt:             now.Add(-1 * 24 * time.Hour),
+		},
+		{
+			ID:                    "lb_004",
+			PlayerName:            "Arsiparis Dewi",
+			Character:             "scholar",
+			VP:                    18,
+			Darkness:              7,
+			Rounds:                8,
+			Won:                   true,
+			MonstersSlain:         0,
+			ComponentsContributed: 3,
+			MatchID:               "m_lore_99",
+			CreatedAt:             now.Add(-12 * time.Hour),
+		},
+		{
+			ID:                    "lb_005",
+			PlayerName:            "Petualang Eko",
+			Character:             "navigator",
+			VP:                    15,
+			Darkness:              8,
+			Rounds:                5,
+			Won:                   false,
+			MonstersSlain:         2,
+			ComponentsContributed: 2,
+			MatchID:               "m_dread_01",
+			CreatedAt:             now.Add(-6 * time.Hour),
+		},
+	}
+	m.leaderboard = append(m.leaderboard, sample...)
 }
 
 func (m *MemoryStore) CreateMatch(_ context.Context, rec MatchRecord) error {
@@ -288,6 +365,81 @@ func (m *MemoryStore) GetPushSubscriptions(_ context.Context, playerID string) (
 	return out, nil
 }
 
+// Leaderboard & Pencapaian Skor
+
+func (m *MemoryStore) AddLeaderboardEntry(_ context.Context, entry LeaderboardEntry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now()
+	}
+	m.leaderboard = append(m.leaderboard, entry)
+	return nil
+}
+
+func (m *MemoryStore) GetLeaderboard(_ context.Context, category string, limit int) ([]LeaderboardEntry, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if limit <= 0 {
+		limit = 20
+	}
+
+	copied := make([]LeaderboardEntry, len(m.leaderboard))
+	copy(copied, m.leaderboard)
+
+	switch category {
+	case "speed", "rounds":
+		// Kemenangan tercepat (hanya yang menang, ronde lebih sedikit lebih baik)
+		var wonOnly []LeaderboardEntry
+		for _, e := range copied {
+			if e.Won {
+				wonOnly = append(wonOnly, e)
+			}
+		}
+		sort.SliceStable(wonOnly, func(i, j int) bool {
+			if wonOnly[i].Rounds != wonOnly[j].Rounds {
+				return wonOnly[i].Rounds < wonOnly[j].Rounds
+			}
+			return wonOnly[i].VP > wonOnly[j].VP
+		})
+		if len(wonOnly) > limit {
+			wonOnly = wonOnly[:limit]
+		}
+		return wonOnly, nil
+
+	case "monsters":
+		// Pemburu monster terbanyak
+		sort.SliceStable(copied, func(i, j int) bool {
+			if copied[i].MonstersSlain != copied[j].MonstersSlain {
+				return copied[i].MonstersSlain > copied[j].MonstersSlain
+			}
+			return copied[i].VP > copied[j].VP
+		})
+
+	case "vp":
+		fallthrough
+	default:
+		// Skor Victory Points tertinggi
+		sort.SliceStable(copied, func(i, j int) bool {
+			if copied[i].VP != copied[j].VP {
+				return copied[i].VP > copied[j].VP
+			}
+			if copied[i].Won != copied[j].Won {
+				return copied[i].Won
+			}
+			return copied[i].Rounds < copied[j].Rounds
+		})
+	}
+
+	if len(copied) > limit {
+		copied = copied[:limit]
+	}
+	return copied, nil
+}
+
 func (m *MemoryStore) Close() error {
 	return nil
 }
+
